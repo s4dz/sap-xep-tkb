@@ -1,0 +1,104 @@
+# Sắp xếp thời khóa biểu
+
+Ứng dụng Python chạy local, giao diện tiếng Việt, hỗ trợ tình nguyện viên (TNV) và các bé học từ Thứ Hai đến Thứ Sáu, 18:00–20:00. Dữ liệu mẫu hoàn toàn giả lập, chỉ dùng mã định danh. Không dùng LLM, API AI hoặc phân tích tính cách.
+
+## Cài đặt và chạy trên Windows
+
+1. Cài Python 3.11 trở lên (khuyến nghị 3.12), có Python Launcher `py`.
+2. Mở thư mục `C:\Users\admin\Documents\Python\sap-xep-tkb`.
+3. Nhấp đúp `run_app.bat`. Lần đầu cần mạng để tải thư viện. Những lần sau chạy hoàn toàn local.
+4. Mở `http://127.0.0.1:8501` nếu trình duyệt chưa tự mở.
+5. Đóng cửa sổ lệnh hoặc nhấn Ctrl+C để dừng ứng dụng.
+
+Cài thủ công trong PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1
+```
+
+Môi trường `.venv` trên máy triển khai đã được cài thư viện. Các phiên bản thực tế được ghi trong `requirements-lock.txt`; có thể thay `requirements.txt` bằng tệp này để tái lập môi trường.
+
+## Luồng sử dụng
+
+1. Chọn **Dùng dữ liệu mẫu** hoặc tải một file `.xlsx`. Lỗi cấu trúc và giá trị được báo kèm sheet/hàng.
+2. Xem số TNV, bé, nhu cầu và bảng dữ liệu đầu vào.
+3. Trong **Duyệt cặp và lựa chọn khóa**, chọn mã TNV và bé; xem câu hỏi/câu trả lời phỏng vấn và ghi chú; lưu **Ưu tiên / Bình thường / Không ghép**. Ghi chú không tác động tự động đến lịch.
+4. Trong **Thời khóa biểu**, nhấn **Xếp thời khóa biểu**. Xem lịch, bé chưa có buổi và từng nhu cầu chưa đáp ứng.
+5. Khóa toàn bộ buổi đã duyệt hoặc bỏ khóa. Một khóa trong Excel là một TNV–bé–môn–ngày; buổi hai bé có thể có một phần khóa. Khóa từng lựa chọn có thể được bỏ trong khu vực duyệt.
+6. Nhấn **Xếp lại, giữ lựa chọn khóa** sau khi thay đổi. Khi dữ liệu duyệt thay đổi, lịch cũ được đánh dấu cần cập nhật và không được tải xuống như lịch hiện hành.
+7. **Tải kết quả Excel** chứa lịch, nhu cầu chưa đáp ứng, tổng quan và toàn bộ dữ liệu đầu vào. **Lưu dữ liệu, đánh giá và khóa hiện tại** dùng để lưu tiến độ kể cả khi các khóa đang mâu thuẫn. Tải lại một trong hai file này ở lần sử dụng sau.
+
+Thay file đầu vào sẽ bắt đầu phiên dữ liệu mới. Thay đổi chỉ nằm trong bộ nhớ phiên cho tới khi tải xuống; không tự ghi đè file trên máy. Không đưa dữ liệu thật vào Git; lưu file thực tế ngoài thư mục dự án.
+
+## Cấu trúc workbook
+
+Hàng 1 chứa đúng tên cột. Một hàng là một bản ghi, trừ `Interview_TNV`. Mã là chuỗi không trống và phải tham chiếu mã đã khai báo; tên thật không cần thiết. Dấu `;` phân tách ngày rảnh của bé. Ngày chấp nhận `Thứ Hai`…`Thứ Sáu` hoặc `2`…`6`. Không chấp nhận cuối tuần.
+
+| Sheet | Cột và ý nghĩa |
+|---|---|
+| `TNV` | `Ma_TNV`, `Mon`, `Lop`, `Gioi_han_buoi`. Mỗi hàng đăng ký một môn–lớp cụ thể. Lặp mã TNV để đăng ký nhiều môn/lớp. Giới hạn mặc định 1 khi trống, từ 0–5 và phải thống nhất giữa các hàng của cùng TNV. Muốn dạy cả cấp cần đăng ký từng lớp. |
+| `Lich_ranh_TNV` | `Ma_TNV`, `Ngay`. Một hàng cho mỗi ngày rảnh. TNV không có dòng ngày rảnh sẽ không được xếp. |
+| `Be` | **Sheet bổ sung**: `Ma_be`, `Tuoi`, `Lop`, `Ngay_ranh`. Một hàng/bé, tuổi nguyên 1–25, lớp 1–12. Ví dụ `Thứ Hai;Thứ Tư`. Tuổi dùng để kiểm tra điều kiện lớp ghép; lớp dùng để kiểm tra chuyên môn. |
+| `Nhu_cau_be` | `Ma_be`, `Mon`. Một hàng/môn cần học, không trùng bé–môn. Mỗi nhu cầu tối đa một buổi/tuần. |
+| `Insight_be` | `Ma_be`, `Ghi_chu`. Có thể có nhiều dòng, được nối khi hiển thị. |
+| `Interview_TNV` | Cột đầu `Cau_hoi`; các cột tiếp theo là mã TNV. Mỗi hàng một câu hỏi. Câu trả lời trống được bỏ qua; câu trả lời có nội dung phải có câu hỏi. Có thể chỉ có cột của một số TNV. |
+| `Cap_be_xung_khac` | `Ma_be_1`, `Ma_be_2`. Thứ tự mã không quan trọng; hai mã phải khác nhau. |
+| `Danh_gia_ghep` | `Ma_TNV`, `Ma_be`, `Trang_thai`: `Ưu tiên`, `Bình thường`, `Không ghép`. Không khai báo tương đương Bình thường. Trạng thái áp dụng cho mọi môn của cặp. |
+| `Lua_chon_da_khoa` | `Ma_TNV`, `Ma_be`, `Mon`, `Ngay`. Một hàng/lựa chọn. Hai khóa cùng TNV/ngày chỉ được gộp nếu cùng môn, cùng tuổi và không xung khắc. |
+
+Sheet trống vẫn cần hàng tiêu đề. Sheet kết quả bổ sung được bỏ qua khi tải lại. Ô công thức trong các trường dữ liệu không được tính; dùng giá trị trực tiếp. Mã bé trong sheet `Be` không được trùng.
+
+Danh mục: lớp 1–5 có Toán, Tiếng Việt, Tiếng Anh; lớp 6–9 có Toán, Ngữ văn, Tiếng Anh, Khoa học tự nhiên; lớp 10–12 có Toán, Ngữ văn, Tiếng Anh. Chuẩn hóa khoảng trắng, chữ hoa/thường, Unicode và các bí danh `Anh`, `Văn`, `KHTN`. `Văn` là Ngữ văn, không thay thế Tiếng Việt cấp 1.
+
+Mẫu `data/du_lieu_mau.xlsx`: 6 TNV, 9 bé, 14 nhu cầu, 2 cặp xung khắc, đánh giá ưu tiên/cấm và 1 lựa chọn khóa. `BE008` thiếu TNV đúng lớp; `BE009` không có ngày chung. Đây là các trường hợp cố ý chưa thể đáp ứng.
+
+## Quy tắc và tối ưu
+
+Mỗi buổi gồm một TNV, một môn và một hoặc hai bé. Lớp hai bé phải cùng tuổi, cùng môn và mỗi bé đều phù hợp lớp TNV đã đăng ký; không yêu cầu hai bé cùng lớp nếu TNV đăng ký cả hai lớp. Mỗi người tối đa một buổi/ngày. TNV không vượt giới hạn tuần. Không ghép và khóa là ràng buộc cứng; khóa không được lấn át lịch rảnh hoặc chuyên môn.
+
+OR-Tools CP-SAT tối ưu lần lượt: số bé khác nhau có ít nhất một buổi → số nhu cầu được đáp ứng → số lựa chọn ưu tiên được đáp ứng → giảm số buổi hai bé → giảm tổng bình phương số buổi của từng TNV (cân bằng số buổi tuyệt đối). Chỉ cố định mục tiêu khi chứng minh tối ưu rồi mới chuyển sang mục tiêu tiếp theo; không dùng tổng trọng số có thể đảo thứ tự ưu tiên.
+
+Giới hạn tổng thời gian tìm kiếm mặc định 30 giây. Nếu hết thời gian, trả phương án hợp lệ tốt nhất đã tìm được và báo có thể còn cải thiện. Trước khi có kết quả tìm kiếm, các khóa đã kiểm tra tạo thành lịch nền hợp lệ. Nhu cầu chưa đáp ứng được giải thích bằng kiểm tra chuyên môn/ngày/cấm và các nguyên nhân có thể; không tuyên bố xác định chính xác một nguyên nhân duy nhất cho xung đột toàn cục.
+
+## Kiến trúc và kiểm thử
+
+```text
+app.py                    giao diện Streamlit
+scheduler/models.py       mô hình dữ liệu
+scheduler/excel_io.py     đọc, chuẩn hóa, kiểm tra và ghi workbook
+scheduler/engine.py       kiểm tra khóa và xếp lịch
+scheduler/explanations.py giải thích nhu cầu còn thiếu
+scheduler/export.py       bảng kết quả và xuất Excel
+scripts/sample_data.py    dữ liệu giả lập
+tests/                    kiểm thử nghiệp vụ, Excel và giao diện
+```
+
+Đánh giá hiện tại nằm ở `Dataset.ratings`; `eligible` đọc đánh giá này, không đọc phỏng vấn/insight. Có thể bổ sung module chấm độ phù hợp độc lập về sau, nhưng phải thiết kế lại rõ mục tiêu ưu tiên trước khi đưa điểm vào bộ xếp lịch.
+
+Chạy kiểm thử:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Kiểm thử bao gồm các ràng buộc nghiệp vụ, thứ tự tối ưu, khóa mâu thuẫn, lịch thiếu nguồn lực, thời gian tìm kiếm bằng 0, chuẩn hóa/kiểm tra Excel, xuất–tải lại và luồng giao diện xếp–khóa–xếp lại–đánh giá cấm. File kiểm chứng được tạo trong `outputs/` và không đưa vào Git.
+
+## Giới hạn MVP
+
+- Một khung giờ cố định; không quản lý phòng học, lịch nghỉ, ngày tháng cụ thể hoặc nhiều tuần.
+- Một nhu cầu bé–môn tương ứng một buổi/tuần; không có số buổi riêng cho từng môn.
+- Không đăng nhập, không cơ sở dữ liệu và không hợp nhất chỉnh sửa nhiều người. Phiên làm việc cần tải file xuống để lưu.
+- Số ứng viên tăng nhanh khi nhiều bé có cùng tuổi/môn; dữ liệu lớn có thể hết thời gian trước khi chứng minh tối ưu. Các phương án đồng hạng không có tiêu chí phá hòa riêng.
+- Không tự phân tích ghi chú hoặc thông tin phỏng vấn.
+- Khi chuyển sang máy khác, phải tạo lại `.venv`; không sao chép môi trường này qua Git.
+
+## GitHub
+
+Repository được yêu cầu là riêng tư, tên `sap-xep-tkb`. Nếu máy chưa có đăng nhập GitHub khả dụng, project local và commit vẫn được hoàn thành; có thể đăng nhập GitHub CLI rồi chạy:
+
+```powershell
+gh auth login
+gh repo create sap-xep-tkb --private --source . --remote origin --push
+```
