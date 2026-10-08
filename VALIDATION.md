@@ -1,5 +1,12 @@
 # Kết quả kiểm chứng
 
+Cập nhật ngày 09/10/2026:
+
+- Toàn bộ 39 kiểm thử vượt qua, bao gồm 5 kiểm thử bổ sung cho chế độ chỉ 1:1, tuổi chưa cung cấp, xuất–tải lại cấu hình, khóa lớp hai bé bị từ chối và chuyên môn Lý/Hóa riêng biệt.
+- Bổ sung ràng buộc tổng số bé được xếp không vượt số nhu cầu được đáp ứng, và dùng lời giải đã có làm gợi ý cho mục tiêu tiếp theo. Không thay đổi thứ tự tối ưu.
+- Kiểm thử giao diện cần được chạy trong môi trường cho phép socket nội bộ của Streamlit; môi trường sandbox có thể chặn khởi tạo vòng lặp sự kiện.
+- Các workbook dữ liệu thật và kết quả local nằm ngoài nội dung theo dõi của Git. Không ghi dữ liệu cá nhân vào tài liệu kiểm chứng này.
+
 Ngày kiểm chứng: 07/10/2026.
 
 - Python 3.12.14, OR-Tools 9.15.6755, Streamlit 1.65.0.

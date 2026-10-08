@@ -34,12 +34,13 @@ if st.session_state.get("fingerprint") != fingerprint:
     st.session_state.stale = False
     st.session_state.revision = 0
 data = st.session_state.data
+st.caption("Chế độ lớp: " + ("Cho phép ghép hai bé cùng tuổi" if data.allow_group_sessions else "Chỉ dạy 1:1") + ". Bé chưa có tuổi chỉ được xếp 1:1.")
 columns = st.columns(3)
 for col, label, value in zip(columns, ["Tình nguyện viên", "Bé", "Nhu cầu môn học"], [len(data.volunteers), len(data.children), len(data.demands)]):
     col.metric(label, value)
 with st.expander("Xem dữ liệu đầu vào"):
     st.dataframe(pd.DataFrame([{"Mã TNV": v.id, "Môn và lớp": "; ".join(f"{s} lớp {g}" for s, g in sorted(v.skills)), "Ngày rảnh": "; ".join(sorted(v.days)), "Giới hạn buổi": v.max_sessions} for v in data.volunteers.values()]), hide_index=True)
-    st.dataframe(pd.DataFrame([{"Mã bé": c.id, "Tuổi": c.age, "Lớp": c.grade, "Ngày rảnh": "; ".join(sorted(c.days)), "Môn cần học": "; ".join(d.subject for d in data.demands if d.child == c.id)} for c in data.children.values()]), hide_index=True)
+    st.dataframe(pd.DataFrame([{"Mã bé": c.id, "Tuổi": c.age if c.age is not None else "Chưa cung cấp", "Lớp": c.grade, "Ngày rảnh": "; ".join(sorted(c.days)), "Môn cần học": "; ".join(d.subject for d in data.demands if d.child == c.id)} for c in data.children.values()]), hide_index=True)
 
 def changed() -> None:
     st.session_state.stale = st.session_state.result is not None

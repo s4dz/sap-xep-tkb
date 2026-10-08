@@ -21,8 +21,8 @@ def candidates(data: Dataset) -> list[Session]:
                               and day in data.children[d.child].days
                               and eligible(data, vid, d.child, subject))
                 sessions.extend(Session(vid, subject, day, (c,)) for c in kids)
-                for a, b in combinations(kids, 2):
-                    if data.children[a].age == data.children[b].age and frozenset((a, b)) not in data.conflicts:
+                for a, b in combinations(kids, 2) if data.allow_group_sessions else ():
+                    if data.children[a].age is not None and data.children[a].age == data.children[b].age and frozenset((a, b)) not in data.conflicts:
                         sessions.append(Session(vid, subject, day, (a, b)))
     return sessions
 
@@ -50,8 +50,10 @@ def validate_locks(data: Dataset) -> None:
         if len(locks) > 2 or len({l.subject for l in locks}) > 1:
             raise DataError(f"TNV {vid} có lựa chọn khóa trùng giờ vào {day}.")
         if len(locks) == 2:
+            if not data.allow_group_sessions:
+                raise DataError(f"TNV {vid}: hai bé được khóa cùng ngày {day}, nhưng đang chọn dạy 1:1.")
             a, b = (l.child for l in locks)
-            if data.children[a].age != data.children[b].age or frozenset((a, b)) in data.conflicts:
+            if data.children[a].age is None or data.children[a].age != data.children[b].age or frozenset((a, b)) in data.conflicts:
                 raise DataError(f"Khóa {a}–{b}: hai bé khác tuổi hoặc xung khắc.")
     for vid, v in data.volunteers.items():
         if sum(key[0] == vid for key in grouped) > v.max_sessions:
@@ -85,6 +87,10 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
         related = [x[i] for i, s in enumerate(choices) if cid in s.children]
         model.add_max_equality(y, related or [0])
         covered.append(y)
+    # A child covered at least once consumes at least one fulfilled demand.
+    # State this aggregate bound explicitly so scarce-capacity cases can prove
+    # optimal coverage without enumerating symmetric schedules.
+    model.add(sum(covered) <= sum(len(s.children) * x[i] for i, s in enumerate(choices)))
     loads = []
     for vid, v in data.volunteers.items():
         load = model.new_int_var(0, min(5, v.max_sessions), f"load_{vid}")
@@ -106,6 +112,9 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
     values = []
     start = monotonic()
     for objective in objectives:
+        if isinstance(objective, int):
+            values.append(objective)
+            continue
         remaining = time_limit - (monotonic() - start)
         if remaining <= 0:
             return Result(best, False, values)
@@ -124,4 +133,10 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
         if status != cp_model.OPTIMAL:
             return Result(best, False, values)
         model.add(objective == value)
+        # Seed the next priority with the complete feasible assignment already
+        # found. This avoids rediscovering a schedule among symmetric choices.
+        model.clear_hints()
+        for index in range(len(model.proto.variables)):
+            variable = model.get_int_var_from_proto_index(index)
+            model.add_hint(variable, solver.value(variable))
     return Result(sorted(best, key=lambda s: (DAYS.index(s.day), s.volunteer)), True, values)

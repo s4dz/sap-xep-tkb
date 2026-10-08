@@ -3,9 +3,9 @@ from dataclasses import dataclass, field
 
 DAYS = ("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu")
 CATALOG = {
-    1: {"Toán", "Tiếng Việt", "Tiếng Anh"},
+    1: {"Toán", "Tiếng Việt", "Tiếng Anh", "Lịch sử"},
     2: {"Toán", "Ngữ văn", "Tiếng Anh", "Khoa học tự nhiên"},
-    3: {"Toán", "Ngữ văn", "Tiếng Anh"},
+    3: {"Toán", "Ngữ văn", "Tiếng Anh", "Vật lý", "Hóa học", "Sinh học"},
 }
 
 def level(grade: int) -> int:
@@ -21,7 +21,7 @@ class Volunteer:
 @dataclass(frozen=True)
 class Child:
     id: str
-    age: int
+    age: int | None
     grade: int
     days: frozenset[str]
 
@@ -54,6 +54,7 @@ class Dataset:
     locks: set[Lock] = field(default_factory=set)
     insights: dict[str, str] = field(default_factory=dict)
     interviews: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
+    allow_group_sessions: bool = True
 
 @dataclass
 class Result:

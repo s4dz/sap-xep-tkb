@@ -7,3 +7,7 @@ node_modules/
 outputs/
 *.inspect.ndjson
 .streamlit/secrets.toml
+# Real input workbooks and local normalized data stay on this machine.
+data/*.xlsx
+!data/du_lieu_mau.xlsx
+data/private/

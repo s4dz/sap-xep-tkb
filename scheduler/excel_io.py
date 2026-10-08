@@ -26,7 +26,8 @@ def normalized(value: object) -> str:
 
 def subject(value: object) -> str:
     aliases = {normalized(s): s for subjects in CATALOG.values() for s in subjects}
-    aliases.update({"anh": "Tiếng Anh", "văn": "Ngữ văn", "khtn": "Khoa học tự nhiên"})
+    aliases.update({"anh": "Tiếng Anh", "văn": "Ngữ văn", "khtn": "Khoa học tự nhiên",
+                    "lý": "Vật lý", "vật lí": "Vật lý", "hóa": "Hóa học", "hoá": "Hóa học", "hoá học": "Hóa học", "sinh": "Sinh học", "sử": "Lịch sử"})
     key = normalized(value)
     if key not in aliases:
         raise DataError(f"Môn học không hợp lệ: {value!r}.")
@@ -76,13 +77,29 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
             raise DataError(f"Mã {kind} {key!r} không tồn tại.")
         return key
     try:
+        allow_group_sessions = True
+        if "Cau_hinh" in wb.sheetnames:
+            config_rows = list(wb["Cau_hinh"].values)
+            if not config_rows or list(config_rows[0][:2]) != ["Tham_so", "Gia_tri"]:
+                raise DataError("Sheet Cau_hinh: cần cột Tham_so, Gia_tri.")
+            settings = {}
+            for row in config_rows[1:]:
+                if not row[0]: continue
+                if text(row[0]) in settings:
+                    raise DataError("Sheet Cau_hinh: tham số bị trùng.")
+                settings[text(row[0])] = text(row[1])
+            mode = settings.get("Che_do_lop", "Cho phép ghép hai bé")
+            if mode not in ("Chỉ 1:1", "Cho phép ghép hai bé"):
+                raise DataError("Sheet Cau_hinh: Che_do_lop phải là Chỉ 1:1 hoặc Cho phép ghép hai bé.")
+            allow_group_sessions = mode != "Chỉ 1:1"
         children = {}
         for r in rows("Be"):
             cid = text(r["Ma_be"])
             if not cid or cid in children:
                 raise DataError("Mã bé trống hoặc trùng.")
             days = frozenset(day(d) for d in text(r["Ngay_ranh"]).split(";"))
-            children[cid] = Child(cid, integer(r["Tuoi"], 1, 25), integer(r["Lop"], 1, 12), days)
+            age = integer(r["Tuoi"], 1, 25) if text(r["Tuoi"]) else None
+            children[cid] = Child(cid, age, integer(r["Lop"], 1, 12), days)
         skills, limits = {}, {}
         for r in rows("TNV"):
             vid = text(r["Ma_TNV"])
@@ -113,7 +130,7 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
             if d in demands:
                 raise DataError(f"Nhu cầu {cid}–{sub} bị trùng.")
             demands.append(d)
-        data = Dataset(volunteers, children, demands)
+        data = Dataset(volunteers, children, demands, allow_group_sessions=allow_group_sessions)
         for r in rows("Cap_be_xung_khac"):
             a, b = (reference(r[col], children, "bé") for col in ("Ma_be_1", "Ma_be_2"))
             if a == b:
@@ -152,6 +169,7 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
 def input_tables(data: Dataset) -> dict[str, list[list]]:
     """Serialize the current human decisions for a reloadable workbook."""
     tables = {name: [headers.copy()] for name, headers in SCHEMA.items()}
+    tables["Cau_hinh"] = [["Tham_so", "Gia_tri"], ["Che_do_lop", "Cho phép ghép hai bé" if data.allow_group_sessions else "Chỉ 1:1"]]
     for v in data.volunteers.values():
         tables["TNV"].extend([v.id, s, g, v.max_sessions] for s, g in sorted(v.skills))
         tables["Lich_ranh_TNV"].extend([v.id, d] for d in DAYS if d in v.days)

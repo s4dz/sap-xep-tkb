@@ -21,8 +21,13 @@ def unmet_demands(data: Dataset, result: Result) -> list[dict[str, str]]:
             reason = "Không có ngày rảnh chung với TNV phù hợp."
         elif not common:
             reason = "TNV phù hợp có giới hạn số buổi bằng 0."
+        elif all(sum(s.volunteer == v.id for s in result.sessions) >= v.max_sessions for v in common):
+            reason = "Trong phương án hiện tại, các TNV phù hợp đều đã đạt giới hạn số buổi/tuần."
         else:
-            reason = "Có ứng viên; có thể thiếu buổi, trùng lịch, vướng lựa chọn khóa hoặc điều kiện lớp ghép."
+            reason = "Có ứng viên; có thể thiếu buổi, trùng lịch hoặc vướng lựa chọn khóa."
+            if data.allow_group_sessions:
+                reason += " Điều kiện lớp ghép cũng có thể giới hạn lựa chọn."
+        if common:
             if not result.optimal:
                 reason += " Thời gian xếp đã hết; phương án có thể còn cải thiện."
         rows.append({"Mã bé": c.id, "Môn": d.subject, "Bé chưa có buổi": "Có" if c.id not in assigned else "Không", "Lý do có thể": reason})

@@ -50,7 +50,11 @@ Hàng 1 chứa đúng tên cột. Một hàng là một bản ghi, trừ `Interv
 
 Sheet trống vẫn cần hàng tiêu đề. Sheet kết quả bổ sung được bỏ qua khi tải lại. Ô công thức trong các trường dữ liệu không được tính; dùng giá trị trực tiếp. Mã bé trong sheet `Be` không được trùng.
 
-Danh mục: lớp 1–5 có Toán, Tiếng Việt, Tiếng Anh; lớp 6–9 có Toán, Ngữ văn, Tiếng Anh, Khoa học tự nhiên; lớp 10–12 có Toán, Ngữ văn, Tiếng Anh. Chuẩn hóa khoảng trắng, chữ hoa/thường, Unicode và các bí danh `Anh`, `Văn`, `KHTN`. `Văn` là Ngữ văn, không thay thế Tiếng Việt cấp 1.
+Danh mục: lớp 1–5 có Toán, Tiếng Việt, Tiếng Anh và Lịch sử; lớp 6–9 có Toán, Ngữ văn, Tiếng Anh, Khoa học tự nhiên; lớp 10–12 có Toán, Ngữ văn, Tiếng Anh, Vật lý, Hóa học, Sinh học. Các môn bổ sung theo thời khóa biểu hiện tại, không tự coi đăng ký Tiếng Việt là đăng ký Lịch sử. Chuẩn hóa khoảng trắng, chữ hoa/thường, Unicode và các bí danh `Anh`, `Văn`, `KHTN`, `Lý`, `Hoá`, `Sinh`, `Sử`. `Văn` là Ngữ văn, không thay thế Tiếng Việt cấp 1.
+
+Sheet tùy chọn `Cau_hinh` có hai cột `Tham_so`, `Gia_tri`. Đặt `Che_do_lop` = `Chỉ 1:1` để cấm lớp hai bé; hoặc `Cho phép ghép hai bé` để dùng quy tắc ghép ban đầu. Khi không có sheet này, dùng quy tắc ban đầu. `Be.Tuoi` được phép trống; bé chưa có tuổi chỉ được xếp 1:1, không tự suy tuổi từ lớp. Chế độ lớp được giữ khi xuất–tải lại.
+
+Dữ liệu thật và kết quả local được loại khỏi Git bằng `.gitignore`; repository chỉ chứa workbook mẫu giả lập. Với đợt xếp theo yêu cầu ngày 09/10/2026: lấy danh sách bé, lớp và môn từ TKB hiện tại, mặc định bé rảnh cả năm ngày, chỉ xếp 1:1. Mỗi môn trong ô gộp qua nhiều bé được tính riêng cho từng bé; môn trong ngoặc cũng được giữ. Ngày của TKB nguồn chỉ dùng đối chiếu, không khóa ngày cũ khi phân công lại.
 
 Mẫu `data/du_lieu_mau.xlsx`: 6 TNV, 9 bé, 14 nhu cầu, 2 cặp xung khắc, đánh giá ưu tiên/cấm và 1 lựa chọn khóa. `BE008` thiếu TNV đúng lớp; `BE009` không có ngày chung. Đây là các trường hợp cố ý chưa thể đáp ứng.
 
