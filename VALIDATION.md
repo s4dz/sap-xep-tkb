@@ -2,6 +2,8 @@
 
 Cập nhật ngày 09/10/2026:
 
+- Toàn bộ 48 kiểm thử vượt qua. Chín kiểm thử mới xác nhận quy tắc riêng từng mái ấm, ghép cấp 1 theo lớp khi được cấu hình, ACA IC trực tiếp dạy và làm lead, giới hạn lead một buổi, thứ tự nguồn lực TNV/BTC, tránh trùng lịch liên mái ấm, kiểm tra khóa thiếu lead và xuất–tải lại cấu hình.
+- Dữ liệu thực tế đã được xếp với cả bảy mục tiêu được chứng minh tối ưu. Kết quả được kiểm tra riêng về ngày rảnh, môn/lớp, giới hạn buổi, lịch trùng, lớp ghép, nhu cầu và lead; dữ liệu cùng kết quả chỉ lưu local trong thư mục bị Git bỏ qua.
 - Toàn bộ 39 kiểm thử vượt qua, bao gồm 5 kiểm thử bổ sung cho chế độ chỉ 1:1, tuổi chưa cung cấp, xuất–tải lại cấu hình, khóa lớp hai bé bị từ chối và chuyên môn Lý/Hóa riêng biệt.
 - Bổ sung ràng buộc tổng số bé được xếp không vượt số nhu cầu được đáp ứng, và dùng lời giải đã có làm gợi ý cho mục tiêu tiếp theo. Không thay đổi thứ tự tối ưu.
 - Kiểm thử giao diện cần được chạy trong môi trường cho phép socket nội bộ của Streamlit; môi trường sandbox có thể chặn khởi tạo vòng lặp sự kiện.

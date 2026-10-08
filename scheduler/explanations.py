@@ -27,6 +27,11 @@ def unmet_demands(data: Dataset, result: Result) -> list[dict[str, str]]:
             reason = "Có ứng viên; có thể thiếu buổi, trùng lịch hoặc vướng lựa chọn khóa."
             if data.allow_group_sessions:
                 reason += " Điều kiện lớp ghép cũng có thể giới hạn lựa chọn."
+        policy = data.sites.get(c.site)
+        if data.sites:
+            reason = reason.replace("TNV", "người dạy")
+        if policy and policy.require_academic_lead:
+            reason += " Mái ấm này chỉ mở lớp vào ngày có BTC ACA IC trực tiếp dạy và làm lead."
         if common:
             if not result.optimal:
                 reason += " Thời gian xếp đã hết; phương án có thể còn cải thiện."

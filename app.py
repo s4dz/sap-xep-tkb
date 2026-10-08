@@ -34,13 +34,16 @@ if st.session_state.get("fingerprint") != fingerprint:
     st.session_state.stale = False
     st.session_state.revision = 0
 data = st.session_state.data
-st.caption("Chế độ lớp: " + ("Cho phép ghép hai bé cùng tuổi" if data.allow_group_sessions else "Chỉ dạy 1:1") + ". Bé chưa có tuổi chỉ được xếp 1:1.")
+if not data.sites:
+    st.caption("Chế độ lớp: " + ("Cho phép ghép hai bé cùng tuổi" if data.allow_group_sessions else "Chỉ dạy 1:1") + ". Bé chưa có tuổi chỉ được xếp 1:1.")
+if data.sites:
+    st.info("Áp dụng quy tắc riêng từng mái ấm. Mái ấm cần ACA IC chỉ mở lớp khi có BTC ACA IC trực tiếp dạy và làm lead; số buổi người dạy được kiểm tra trên cả hai mái ấm.")
 columns = st.columns(3)
-for col, label, value in zip(columns, ["Tình nguyện viên", "Bé", "Nhu cầu môn học"], [len(data.volunteers), len(data.children), len(data.demands)]):
+for col, label, value in zip(columns, ["Người dạy" if data.sites else "Tình nguyện viên", "Bé", "Nhu cầu môn học"], [len(data.volunteers), len(data.children), len(data.demands)]):
     col.metric(label, value)
 with st.expander("Xem dữ liệu đầu vào"):
-    st.dataframe(pd.DataFrame([{"Mã TNV": v.id, "Môn và lớp": "; ".join(f"{s} lớp {g}" for s, g in sorted(v.skills)), "Ngày rảnh": "; ".join(sorted(v.days)), "Giới hạn buổi": v.max_sessions} for v in data.volunteers.values()]), hide_index=True)
-    st.dataframe(pd.DataFrame([{"Mã bé": c.id, "Tuổi": c.age if c.age is not None else "Chưa cung cấp", "Lớp": c.grade, "Ngày rảnh": "; ".join(sorted(c.days)), "Môn cần học": "; ".join(d.subject for d in data.demands if d.child == c.id)} for c in data.children.values()]), hide_index=True)
+    st.dataframe(pd.DataFrame([{"Mã người dạy": v.id, "Loại": v.kind, "Vai trò": v.role, "Môn và lớp": "; ".join(f"{s} lớp {g}" for s, g in sorted(v.skills)), "Ngày rảnh": "; ".join(sorted(v.days)), "Giới hạn buổi": v.max_sessions} for v in data.volunteers.values()]), hide_index=True)
+    st.dataframe(pd.DataFrame([{"Mã bé": c.id, "Mái ấm": c.site, "Tuổi": c.age if c.age is not None else "Chưa cung cấp", "Lớp": c.grade, "Ngày rảnh": "; ".join(sorted(c.days)), "Môn cần học": "; ".join(d.subject for d in data.demands if d.child == c.id)} for c in data.children.values()]), hide_index=True)
 
 def changed() -> None:
     st.session_state.stale = st.session_state.result is not None
@@ -49,7 +52,7 @@ def changed() -> None:
 review, schedule = st.tabs(["Duyệt cặp và lựa chọn khóa", "Thời khóa biểu"])
 with review:
     left, right = st.columns(2)
-    vid = left.selectbox("Tình nguyện viên", sorted(data.volunteers))
+    vid = left.selectbox("Người dạy" if data.sites else "Tình nguyện viên", sorted(data.volunteers))
     cid = right.selectbox("Bé", sorted(data.children))
     left.subheader("Thông tin phỏng vấn")
     for question, answer in data.interviews.get(vid, []):
@@ -102,7 +105,14 @@ with schedule:
             st.warning("Đã có lịch hợp lệ trong thời gian cho phép. Phương án có thể còn cải thiện; bạn có thể xếp lại.")
         served = {c for s in result.sessions for c in s.children}
         st.success(f"Đã xếp {len(served)}/{len(data.children)} bé, đáp ứng {sum(len(s.children) for s in result.sessions)}/{len(data.demands)} nhu cầu.")
-        st.dataframe(pd.DataFrame(schedule_rows(data, result), columns=HEADERS), hide_index=True, width="stretch")
+        display_rows = schedule_rows(data, result)
+        if data.sites:
+            for site in data.sites:
+                st.subheader(site)
+                site_rows = [r for r in display_rows if r["Mái ấm"] == site]
+                st.dataframe(pd.DataFrame(site_rows), hide_index=True, width="stretch")
+        else:
+            st.dataframe(pd.DataFrame(display_rows, columns=HEADERS), hide_index=True, width="stretch")
         for idx, session in enumerate(result.sessions):
             keys = {Lock(session.volunteer, c, session.subject, session.day) for c in session.children}
             fully_locked = keys <= data.locks

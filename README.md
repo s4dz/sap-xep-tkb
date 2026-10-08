@@ -50,11 +50,19 @@ Hàng 1 chứa đúng tên cột. Một hàng là một bản ghi, trừ `Interv
 
 Sheet trống vẫn cần hàng tiêu đề. Sheet kết quả bổ sung được bỏ qua khi tải lại. Ô công thức trong các trường dữ liệu không được tính; dùng giá trị trực tiếp. Mã bé trong sheet `Be` không được trùng.
 
-Danh mục: lớp 1–5 có Toán, Tiếng Việt, Tiếng Anh và Lịch sử; lớp 6–9 có Toán, Ngữ văn, Tiếng Anh, Khoa học tự nhiên; lớp 10–12 có Toán, Ngữ văn, Tiếng Anh, Vật lý, Hóa học, Sinh học. Các môn bổ sung theo thời khóa biểu hiện tại, không tự coi đăng ký Tiếng Việt là đăng ký Lịch sử. Chuẩn hóa khoảng trắng, chữ hoa/thường, Unicode và các bí danh `Anh`, `Văn`, `KHTN`, `Lý`, `Hoá`, `Sinh`, `Sử`. `Văn` là Ngữ văn, không thay thế Tiếng Việt cấp 1.
+Danh mục: lớp 1–5 có Toán, Tiếng Việt, Tiếng Anh, Lịch sử và Khoa học; lớp 6–9 có Toán, Ngữ văn, Tiếng Anh, Khoa học tự nhiên, Vật lý, Hóa học, Sinh học; lớp 10–12 có Toán, Ngữ văn, Tiếng Anh, Vật lý, Hóa học, Sinh học. Các môn bổ sung theo dữ liệu hiện tại; không tự coi đăng ký Tiếng Việt là đăng ký Lịch sử, hoặc Lý/Hóa riêng là đủ chuyên môn toàn môn Khoa học tự nhiên. Chuẩn hóa khoảng trắng, chữ hoa/thường, Unicode và các bí danh `Anh`, `Văn`, `KHTN`, `Lý`, `Hoá`, `Sinh`, `Sử`. `Văn` là Ngữ văn, không thay thế Tiếng Việt cấp 1.
 
 Sheet tùy chọn `Cau_hinh` có hai cột `Tham_so`, `Gia_tri`. Đặt `Che_do_lop` = `Chỉ 1:1` để cấm lớp hai bé; hoặc `Cho phép ghép hai bé` để dùng quy tắc ghép ban đầu. Khi không có sheet này, dùng quy tắc ban đầu. `Be.Tuoi` được phép trống; bé chưa có tuổi chỉ được xếp 1:1, không tự suy tuổi từ lớp. Chế độ lớp được giữ khi xuất–tải lại.
 
-Dữ liệu thật và kết quả local được loại khỏi Git bằng `.gitignore`; repository chỉ chứa workbook mẫu giả lập. Với đợt xếp theo yêu cầu ngày 09/10/2026: lấy danh sách bé, lớp và môn từ TKB hiện tại, mặc định bé rảnh cả năm ngày, chỉ xếp 1:1. Mỗi môn trong ô gộp qua nhiều bé được tính riêng cho từng bé; môn trong ngoặc cũng được giữ. Ngày của TKB nguồn chỉ dùng đối chiếu, không khóa ngày cũ khi phân công lại.
+Với lịch nhiều mái ấm, bổ sung `Be.Mai_am`; sheet `Quy_tac_mai_am` gồm `Mai_am`, `Ghep_cap_1`, `Can_lead_aca_ic`, `Dung_lop_thay_tuoi`, với ba cờ Có/Không. Quy tắc mái ấm được dùng thay quy tắc ghép toàn cục. Ghép chỉ áp dụng cấp 1 cùng mái ấm; mặc định cần cùng tuổi đã biết. Chỉ bật `Dung_lop_thay_tuoi` khi đã đồng ý dùng cùng lớp làm điều kiện ghép tạm. Cặp không ghép vẫn được tôn trọng.
+
+Sheet `TNV` được dùng chung cho người dạy, có thêm cột `Loai` (`TNV`/`BTC`) và `Vai_tro` (ví dụ `ACA IC`). BTC ACA IC phải trực tiếp dạy lớp phù hợp môn/lớp vào đúng ngày tại mái ấm cần lead; chỉ hiện diện hoặc dạy ở mái ấm khác không được tính. Một người không dạy hai mái ấm cùng ngày; giới hạn tuần tính tổng trên cả hai mái ấm. Nếu một ACA IC chỉ được một buổi, người đó chỉ làm lead vào đúng buổi dạy đó.
+
+Đặt `Cau_hinh.Uu_tien_nguon_luc` = `Có` để dùng thứ tự: tối đa bé → tối đa nhu cầu → ít buổi BTC → ít buổi bổ sung sau buổi đầu của TNV → đánh giá ưu tiên → ít lớp ghép → cân bằng tải. Điều này dùng TNV trước, buổi thứ hai của TNV trước BTC, cho cùng mức đáp ứng. ACA IC bắt buộc là ngoại lệ theo ràng buộc lead. Giới hạn hai buổi không được suy từ ngày rảnh trừ khi người dùng đã xác nhận; với đợt này người dùng đã đồng ý làm vậy. BTC thông thường tối đa hai buổi, ACA IC tối đa một buổi. Trạng thái tối ưu trong kết quả thể hiện đã chứng minh toàn bộ mục tiêu hay mới có phương án tốt nhất trong giới hạn thời gian.
+
+Giao diện hiển thị bảng riêng cho từng mái ấm. File kết quả có thêm `Lich_<mã mái ấm>` và `Lead_team`, đồng thời giữ đầy đủ cấu hình để tải lại. Bộ xếp giải chung nguồn lực để tránh hai lịch riêng phân công trùng người.
+
+Dữ liệu thật và kết quả local được loại khỏi Git bằng `.gitignore`; repository chỉ chứa workbook mẫu giả lập. Với đợt xếp theo yêu cầu ngày 09/10/2026: lấy danh sách bé, lớp và môn từ TKB hiện tại, mặc định bé rảnh cả năm ngày. Mái ấm 1 cho phép ghép cấp 1 cùng lớp, cùng môn theo xác nhận; mái ấm 2 chỉ xếp 1:1 và cần lead ACA IC trực tiếp dạy. Mỗi môn trong ô gộp qua nhiều bé được tính riêng cho từng bé; môn trong ngoặc cũng được giữ. Ngày của TKB nguồn chỉ dùng đối chiếu, không khóa ngày cũ khi phân công lại.
 
 Mẫu `data/du_lieu_mau.xlsx`: 6 TNV, 9 bé, 14 nhu cầu, 2 cặp xung khắc, đánh giá ưu tiên/cấm và 1 lựa chọn khóa. `BE008` thiếu TNV đúng lớp; `BE009` không có ngày chung. Đây là các trường hợp cố ý chưa thể đáp ứng.
 
@@ -64,7 +72,7 @@ Mỗi buổi gồm một TNV, một môn và một hoặc hai bé. Lớp hai bé
 
 OR-Tools CP-SAT tối ưu lần lượt: số bé khác nhau có ít nhất một buổi → số nhu cầu được đáp ứng → số lựa chọn ưu tiên được đáp ứng → giảm số buổi hai bé → giảm tổng bình phương số buổi của từng TNV (cân bằng số buổi tuyệt đối). Chỉ cố định mục tiêu khi chứng minh tối ưu rồi mới chuyển sang mục tiêu tiếp theo; không dùng tổng trọng số có thể đảo thứ tự ưu tiên.
 
-Giới hạn tổng thời gian tìm kiếm mặc định 30 giây. Nếu hết thời gian, trả phương án hợp lệ tốt nhất đã tìm được và báo có thể còn cải thiện. Trước khi có kết quả tìm kiếm, các khóa đã kiểm tra tạo thành lịch nền hợp lệ. Nhu cầu chưa đáp ứng được giải thích bằng kiểm tra chuyên môn/ngày/cấm và các nguyên nhân có thể; không tuyên bố xác định chính xác một nguyên nhân duy nhất cho xung đột toàn cục.
+Giới hạn tổng thời gian tìm kiếm mặc định 30 giây. Nếu hết thời gian, trả phương án hợp lệ tốt nhất đã tìm được và báo có thể còn cải thiện. Các khóa chỉ được dùng làm lịch nền khi thỏa cả yêu cầu lead; nếu chưa tìm được lịch có lead giữ toàn bộ khóa, ứng dụng báo rõ cần kiểm tra khóa hoặc tăng thời gian xếp. Nhu cầu chưa đáp ứng được giải thích bằng kiểm tra chuyên môn/ngày/cấm và các nguyên nhân có thể; không tuyên bố xác định chính xác một nguyên nhân duy nhất cho xung đột toàn cục.
 
 ## Kiến trúc và kiểm thử
 
@@ -73,6 +81,7 @@ app.py                    giao diện Streamlit
 scheduler/models.py       mô hình dữ liệu
 scheduler/excel_io.py     đọc, chuẩn hóa, kiểm tra và ghi workbook
 scheduler/engine.py       kiểm tra khóa và xếp lịch
+scheduler/policies.py     quy tắc mái ấm, lớp ghép và lead
 scheduler/explanations.py giải thích nhu cầu còn thiếu
 scheduler/export.py       bảng kết quả và xuất Excel
 scripts/sample_data.py    dữ liệu giả lập

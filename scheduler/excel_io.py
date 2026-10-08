@@ -4,7 +4,7 @@ from pathlib import Path
 import unicodedata
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from .models import CATALOG, DAYS, Child, Dataset, DataError, Demand, Lock, Volunteer, level
+from .models import CATALOG, DAYS, Child, Dataset, DataError, Demand, Lock, Volunteer, SitePolicy, level
 
 SCHEMA = {
     "TNV": ["Ma_TNV", "Mon", "Lop", "Gioi_han_buoi"],
@@ -78,11 +78,11 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
         return key
     try:
         allow_group_sessions = True
+        settings = {}
         if "Cau_hinh" in wb.sheetnames:
             config_rows = list(wb["Cau_hinh"].values)
             if not config_rows or list(config_rows[0][:2]) != ["Tham_so", "Gia_tri"]:
                 raise DataError("Sheet Cau_hinh: cần cột Tham_so, Gia_tri.")
-            settings = {}
             for row in config_rows[1:]:
                 if not row[0]: continue
                 if text(row[0]) in settings:
@@ -99,8 +99,8 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                 raise DataError("Mã bé trống hoặc trùng.")
             days = frozenset(day(d) for d in text(r["Ngay_ranh"]).split(";"))
             age = integer(r["Tuoi"], 1, 25) if text(r["Tuoi"]) else None
-            children[cid] = Child(cid, age, integer(r["Lop"], 1, 12), days)
-        skills, limits = {}, {}
+            children[cid] = Child(cid, age, integer(r["Lop"], 1, 12), days, text(r.get("Mai_am")))
+        skills, limits, kinds, roles = {}, {}, {}, {}
         for r in rows("TNV"):
             vid = text(r["Ma_TNV"])
             if not vid:
@@ -115,11 +115,16 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                 raise DataError("Đăng ký TNV–môn–lớp bị trùng.")
             skills.setdefault(vid, set()).add((sub, grade))
             limits[vid] = limit
+            kind = text(r.get("Loai")) or "TNV"
+            role = text(r.get("Vai_tro"))
+            if kind not in ("TNV", "BTC") or (vid in kinds and (kinds[vid], roles[vid]) != (kind, role)):
+                raise DataError("Loại người dạy phải là TNV/BTC và vai trò phải thống nhất giữa các hàng.")
+            kinds[vid], roles[vid] = kind, role
         availability = {vid: set() for vid in skills}
         for r in rows("Lich_ranh_TNV"):
             vid = reference(r["Ma_TNV"], skills, "TNV")
             availability[vid].add(day(r["Ngay"]))
-        volunteers = {vid: Volunteer(vid, frozenset(s), frozenset(availability[vid]), limits[vid]) for vid, s in skills.items()}
+        volunteers = {vid: Volunteer(vid, frozenset(s), frozenset(availability[vid]), limits[vid], kinds[vid], roles[vid]) for vid, s in skills.items()}
         demands = []
         for r in rows("Nhu_cau_be"):
             cid = reference(r["Ma_be"], children, "bé")
@@ -131,6 +136,25 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                 raise DataError(f"Nhu cầu {cid}–{sub} bị trùng.")
             demands.append(d)
         data = Dataset(volunteers, children, demands, allow_group_sessions=allow_group_sessions)
+        tier_setting = settings.get("Uu_tien_nguon_luc", "Không")
+        if tier_setting not in ("Có", "Không"):
+            raise DataError("Cau_hinh.Uu_tien_nguon_luc phải là Có/Không.")
+        data.prioritize_volunteers = tier_setting == "Có"
+        if "Quy_tac_mai_am" in wb.sheetnames:
+            site_rows = list(wb["Quy_tac_mai_am"].values)
+            headers = [text(c) for c in site_rows[0]] if site_rows else []
+            required = {"Mai_am", "Ghep_cap_1", "Can_lead_aca_ic", "Dung_lop_thay_tuoi"}
+            if not required <= set(headers):
+                raise DataError("Sheet Quy_tac_mai_am thiếu cột cấu hình.")
+            for raw in site_rows[1:]:
+                row = dict(zip(headers, raw))
+                if not text(row.get("Mai_am")): continue
+                flags = [text(row[k]) for k in ("Ghep_cap_1", "Can_lead_aca_ic", "Dung_lop_thay_tuoi")]
+                if any(f not in ("Có", "Không") for f in flags) or row["Mai_am"] in data.sites:
+                    raise DataError("Quy_tac_mai_am: mã bị trùng hoặc giá trị không phải Có/Không.")
+                data.sites[text(row["Mai_am"])] = SitePolicy(*(f == "Có" for f in flags))
+            if any(c.site not in data.sites for c in children.values()):
+                raise DataError("Mỗi bé phải có Mai_am và mái ấm đó phải có trong Quy_tac_mai_am.")
         for r in rows("Cap_be_xung_khac"):
             a, b = (reference(r[col], children, "bé") for col in ("Ma_be_1", "Ma_be_2"))
             if a == b:
@@ -170,10 +194,16 @@ def input_tables(data: Dataset) -> dict[str, list[list]]:
     """Serialize the current human decisions for a reloadable workbook."""
     tables = {name: [headers.copy()] for name, headers in SCHEMA.items()}
     tables["Cau_hinh"] = [["Tham_so", "Gia_tri"], ["Che_do_lop", "Cho phép ghép hai bé" if data.allow_group_sessions else "Chỉ 1:1"]]
+    tables["Cau_hinh"].append(["Uu_tien_nguon_luc", "Có" if data.prioritize_volunteers else "Không"])
+    tables["TNV"][0] += ["Loai", "Vai_tro"]
+    tables["Be"][0].append("Mai_am")
+    if data.sites:
+        tables["Quy_tac_mai_am"] = [["Mai_am", "Ghep_cap_1", "Can_lead_aca_ic", "Dung_lop_thay_tuoi"],
+            *[[site, "Có" if p.allow_primary_pairs else "Không", "Có" if p.require_academic_lead else "Không", "Có" if p.pair_by_grade else "Không"] for site, p in data.sites.items()]]
     for v in data.volunteers.values():
-        tables["TNV"].extend([v.id, s, g, v.max_sessions] for s, g in sorted(v.skills))
+        tables["TNV"].extend([v.id, s, g, v.max_sessions, v.kind, v.role] for s, g in sorted(v.skills))
         tables["Lich_ranh_TNV"].extend([v.id, d] for d in DAYS if d in v.days)
-    tables["Be"].extend([c.id, c.age, c.grade, ";".join(d for d in DAYS if d in c.days)] for c in data.children.values())
+    tables["Be"].extend([c.id, c.age, c.grade, ";".join(d for d in DAYS if d in c.days), c.site] for c in data.children.values())
     tables["Nhu_cau_be"].extend([d.child, d.subject] for d in data.demands)
     tables["Insight_be"].extend([cid, note] for cid, note in data.insights.items())
     tables["Cap_be_xung_khac"].extend(sorted(pair) for pair in sorted(data.conflicts, key=lambda p: sorted(p)))

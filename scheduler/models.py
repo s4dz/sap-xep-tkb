@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 
 DAYS = ("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu")
 CATALOG = {
-    1: {"Toán", "Tiếng Việt", "Tiếng Anh", "Lịch sử"},
-    2: {"Toán", "Ngữ văn", "Tiếng Anh", "Khoa học tự nhiên"},
+    1: {"Toán", "Tiếng Việt", "Tiếng Anh", "Lịch sử", "Khoa học"},
+    2: {"Toán", "Ngữ văn", "Tiếng Anh", "Khoa học tự nhiên", "Vật lý", "Hóa học", "Sinh học"},
     3: {"Toán", "Ngữ văn", "Tiếng Anh", "Vật lý", "Hóa học", "Sinh học"},
 }
 
@@ -17,6 +17,8 @@ class Volunteer:
     skills: frozenset[tuple[str, int]]
     days: frozenset[str]
     max_sessions: int = 1
+    kind: str = "TNV"
+    role: str = ""
 
 @dataclass(frozen=True)
 class Child:
@@ -24,6 +26,14 @@ class Child:
     age: int | None
     grade: int
     days: frozenset[str]
+    site: str = ""
+
+@dataclass(frozen=True)
+class SitePolicy:
+    """Site-specific grouping and academic lead requirements."""
+    allow_primary_pairs: bool = False
+    require_academic_lead: bool = False
+    pair_by_grade: bool = False
 
 @dataclass(frozen=True)
 class Demand:
@@ -55,12 +65,15 @@ class Dataset:
     insights: dict[str, str] = field(default_factory=dict)
     interviews: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
     allow_group_sessions: bool = True
+    sites: dict[str, SitePolicy] = field(default_factory=dict)
+    prioritize_volunteers: bool = False
 
 @dataclass
 class Result:
     sessions: list[Session]
     optimal: bool
     objectives: list[int]
+    leads: dict[tuple[str, str], str] = field(default_factory=dict)
 
 class DataError(ValueError):
     """Input or locked decisions violate a hard constraint."""
