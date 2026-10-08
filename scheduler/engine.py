@@ -88,6 +88,8 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
     for d in data.demands:
         model.add(sum(x[i] for i, s in enumerate(choices) if d.child in s.children and s.subject == d.subject) <= 1)
     for site, policy in data.sites.items():
+        for day in policy.required_days:
+            model.add(sum(x[i] for i, s in enumerate(choices) if session_site(data, s) == site and s.day == day) >= 1)
         if not policy.require_academic_lead:
             continue
         site_active = []
@@ -147,8 +149,11 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
     # Locked sessions alone may lack the mandatory teaching lead. Use them as
     # an incumbent only when all site/day lead requirements are satisfied.
     baseline_leads = pick_leads(data, best)
-    if any(data.sites.get(session_site(data, s)) and data.sites[session_site(data, s)].require_academic_lead
-           and (session_site(data, s), s.day) not in baseline_leads for s in best):
+    baseline_valid = not any(data.sites.get(session_site(data, s)) and data.sites[session_site(data, s)].require_academic_lead
+           and (session_site(data, s), s.day) not in baseline_leads for s in best)
+    baseline_valid = baseline_valid and all(any(session_site(data, s) == site and s.day == day for s in best)
+                          for site, policy in data.sites.items() for day in policy.required_days)
+    if not baseline_valid:
         best = []
     values = []
     start = monotonic()
@@ -158,8 +163,8 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
             continue
         remaining = time_limit - (monotonic() - start)
         if remaining <= 0:
-            if data.locks and not best:
-                raise DataError("Chưa tìm được lịch hợp lệ giữ khóa và có lead ACA IC; hãy tăng thời gian xếp hoặc kiểm tra khóa.")
+            if not baseline_valid and not best:
+                raise DataError("Chưa tìm được lịch hợp lệ đáp ứng ngày học bắt buộc, khóa và lead; hãy tăng thời gian xếp hoặc kiểm tra dữ liệu.")
             return Result(best, False, values, pick_leads(data, best))
         model.maximize(objective)
         solver = cp_model.CpSolver()
@@ -167,10 +172,10 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
         solver.parameters.num_search_workers = 8 if len(choices) > 1000 else 1
         status = solver.solve(model)
         if status == cp_model.INFEASIBLE:
-            raise DataError("Các lựa chọn khóa không thể cùng xuất hiện trong một lịch.")
+            raise DataError("Không có lịch đáp ứng đồng thời các lựa chọn khóa, ngày học bắt buộc và yêu cầu lead.")
         if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            if data.locks and not best:
-                raise DataError("Chưa tìm được lịch hợp lệ giữ khóa và có lead ACA IC.")
+            if not baseline_valid and not best:
+                raise DataError("Chưa tìm được lịch hợp lệ đáp ứng ngày học bắt buộc, khóa và lead.")
             return Result(best, False, values, pick_leads(data, best))
         best = [s for i, s in enumerate(choices) if solver.value(x[i])]
         value = int(solver.value(objective))

@@ -84,3 +84,40 @@ def test_site_and_staff_config_roundtrip():
     d.volunteers['L']=Volunteer('L',frozenset({('Toán',3)}),frozenset({DAYS[2]}),1,'BTC','ACA IC')
     result=solve(d)
     assert read_workbook(export_workbook(d,result))==d
+
+def week_example():
+    d=example()
+    d.children={str(i):Child(str(i),None,3,frozenset(DAYS),'s2') for i in range(10)}
+    d.demands=[Demand(cid,'Toán') for cid in d.children]
+    d.sites['s2']=SitePolicy(False,True,False,frozenset(DAYS))
+    d.volunteers['V']=replace(d.volunteers['V'],max_sessions=5)
+    for i,day in enumerate(DAYS):
+        vid=f'L{i}'
+        d.volunteers[vid]=Volunteer(vid,frozenset({('Toán',3)}),frozenset({day}),1,'BTC','ACA IC')
+    return d
+
+def test_required_week_has_teaching_lead_every_day():
+    d=week_example()
+    result=solve(d)
+    assert result.optimal and len(result.sessions)==10
+    assert {s.day for s in result.sessions}==set(DAYS)
+    assert set(result.leads)=={('s2',day) for day in DAYS}
+    assert all(sum(s.volunteer==v for s in result.sessions)==1 for v in result.leads.values())
+    assert read_workbook(export_workbook(d,result))==d
+
+def test_required_day_without_available_lead_reports_error():
+    d=week_example()
+    del d.volunteers['L0']
+    with pytest.raises(DataError,match='ngày học bắt buộc'):solve(d)
+
+def test_required_week_timeout_does_not_return_invalid_empty_schedule():
+    with pytest.raises(DataError,match='ngày học bắt buộc'):solve(week_example(),0)
+
+def test_merged_role_applies_to_every_person_in_range_only():
+    from openpyxl import Workbook
+    from scheduler.excel_io import merged_cell_value
+    ws=Workbook().active
+    ws['A2']='WF IC';ws.merge_cells('A2:A3')
+    ws['A4']='ACA IC';ws.merge_cells('A4:A6')
+    ws['A7']='PR IC';ws.merge_cells('A7:A8')
+    assert [merged_cell_value(ws,i,1) for i in range(2,10)]==['WF IC','WF IC','ACA IC','ACA IC','ACA IC','PR IC','PR IC',None]

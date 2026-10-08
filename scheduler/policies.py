@@ -1,5 +1,5 @@
 """Shared hard rules for site separation, child pairs and academic leads."""
-from .models import Dataset, Session
+from .models import DAYS, Dataset, Session
 
 def can_pair(data: Dataset, a: str, b: str) -> bool:
     """Unknown ages never imply equal ages; same-grade proxy must be explicit."""
@@ -30,4 +30,4 @@ def pick_leads(data: Dataset, sessions: list[Session]) -> dict[tuple[str, str], 
         site = session_site(data, session)
         if site in data.sites and data.sites[site].require_academic_lead and is_academic_lead(data, session.volunteer):
             groups.setdefault((site, session.day), []).append(session.volunteer)
-    return {key: sorted(values)[0] for key, values in groups.items()}
+    return {key: sorted(groups[key])[0] for key in sorted(groups, key=lambda key: (key[0], DAYS.index(key[1])))}

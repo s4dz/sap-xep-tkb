@@ -2,6 +2,8 @@
 
 Cập nhật ngày 09/10/2026:
 
+- Sau sửa lỗi đọc nhóm vai trò trong ô gộp, toàn bộ 52 kiểm thử vượt qua. Bốn kiểm thử mới xác nhận vai trò áp dụng đủ mọi dòng trong vùng gộp, đủ năm ngày học với ACA IC trực tiếp dạy mỗi ngày, báo lỗi khi thiếu lead cho ngày bắt buộc và không trả lịch nền thiếu ngày khi hết thời gian.
+- Phương án dữ liệu thực tế sau sửa lỗi đáp ứng toàn bộ nhu cầu đã khai báo; mái ấm cần lead có lớp và ACA IC trực tiếp dạy đủ năm ngày. Kiểm tra độc lập xác nhận tất cả vai trò BTC theo nhóm ô gộp, giới hạn một buổi của từng ACA IC, lịch riêng hai mái ấm và khả năng tải lại workbook.
 - Toàn bộ 48 kiểm thử vượt qua. Chín kiểm thử mới xác nhận quy tắc riêng từng mái ấm, ghép cấp 1 theo lớp khi được cấu hình, ACA IC trực tiếp dạy và làm lead, giới hạn lead một buổi, thứ tự nguồn lực TNV/BTC, tránh trùng lịch liên mái ấm, kiểm tra khóa thiếu lead và xuất–tải lại cấu hình.
 - Dữ liệu thực tế đã được xếp với cả bảy mục tiêu được chứng minh tối ưu. Kết quả được kiểm tra riêng về ngày rảnh, môn/lớp, giới hạn buổi, lịch trùng, lớp ghép, nhu cầu và lead; dữ liệu cùng kết quả chỉ lưu local trong thư mục bị Git bỏ qua.
 - Toàn bộ 39 kiểm thử vượt qua, bao gồm 5 kiểm thử bổ sung cho chế độ chỉ 1:1, tuổi chưa cung cấp, xuất–tải lại cấu hình, khóa lớp hai bé bị từ chối và chuyên môn Lý/Hóa riêng biệt.

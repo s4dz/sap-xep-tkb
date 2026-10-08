@@ -62,6 +62,10 @@ Sheet `TNV` được dùng chung cho người dạy, có thêm cột `Loai` (`TN
 
 Giao diện hiển thị bảng riêng cho từng mái ấm. File kết quả có thêm `Lich_<mã mái ấm>` và `Lead_team`, đồng thời giữ đầy đủ cấu hình để tải lại. Bộ xếp giải chung nguồn lực để tránh hai lịch riêng phân công trùng người.
 
+Cột tùy chọn `Quy_tac_mai_am.Ngay_hoc_bat_buoc` ghi các ngày phải có lớp, phân tách bằng `;`. Với mái ấm 2, dùng cả Thứ Hai–Thứ Sáu theo xác nhận. Mỗi ngày này phải có ít nhất một lớp và ACA IC trực tiếp dạy làm lead; nếu dữ liệu không thể đáp ứng, ứng dụng báo lỗi thay vì trả lịch thiếu ngày. Để trống cột này nếu không bắt buộc mở lớp vào ngày cụ thể.
+
+Khi chuẩn hóa workbook nguồn có ô gộp, lấy giá trị ô đầu vùng gộp cho mọi dòng thuộc đúng vùng đó. Đặc biệt, vai trò ACA IC trong vùng A10:A19 áp dụng cho cả nhóm người, không chỉ dòng đầu tiên. Giới hạn một buổi/tuần được áp dụng cho từng ACA IC trong nhóm. Các ô trống ngoài vùng gộp giữ nguyên là trống.
+
 Dữ liệu thật và kết quả local được loại khỏi Git bằng `.gitignore`; repository chỉ chứa workbook mẫu giả lập. Với đợt xếp theo yêu cầu ngày 09/10/2026: lấy danh sách bé, lớp và môn từ TKB hiện tại, mặc định bé rảnh cả năm ngày. Mái ấm 1 cho phép ghép cấp 1 cùng lớp, cùng môn theo xác nhận; mái ấm 2 chỉ xếp 1:1 và cần lead ACA IC trực tiếp dạy. Mỗi môn trong ô gộp qua nhiều bé được tính riêng cho từng bé; môn trong ngoặc cũng được giữ. Ngày của TKB nguồn chỉ dùng đối chiếu, không khóa ngày cũ khi phân công lại.
 
 Mẫu `data/du_lieu_mau.xlsx`: 6 TNV, 9 bé, 14 nhu cầu, 2 cặp xung khắc, đánh giá ưu tiên/cấm và 1 lựa chọn khóa. `BE008` thiếu TNV đúng lớp; `BE009` không có ngày chung. Đây là các trường hợp cố ý chưa thể đáp ứng.
