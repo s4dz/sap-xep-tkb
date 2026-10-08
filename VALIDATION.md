@@ -2,6 +2,8 @@
 
 Cập nhật ngày 09/10/2026:
 
+- Sau bổ sung ACA IC làm lead ở cả hai mái ấm, toàn bộ 56 kiểm thử vượt qua. Bốn kiểm thử mới xác nhận lead không dạy không cần chuyên môn đứng lớp, buổi chỉ làm lead vẫn tiêu thụ giới hạn tuần, không trực hai mái ấm cùng ngày, dạy và lead tại cùng mái ấm chỉ tính một buổi, và mười vị trí lead dùng mười ACA IC khác nhau khi mỗi người chỉ đi một buổi.
+- Đợt xếp với lead đủ hai mái ấm tiếp tục đáp ứng toàn bộ nhu cầu đã khai báo, với đủ mười phân công lead trong tuần. Workbook có bảng đối chiếu nhu cầu theo bé–môn, tách số buổi dạy và số buổi đi dạy/trực lead để kiểm tra giới hạn tuần.
 - Sau sửa lỗi đọc nhóm vai trò trong ô gộp, toàn bộ 52 kiểm thử vượt qua. Bốn kiểm thử mới xác nhận vai trò áp dụng đủ mọi dòng trong vùng gộp, đủ năm ngày học với ACA IC trực tiếp dạy mỗi ngày, báo lỗi khi thiếu lead cho ngày bắt buộc và không trả lịch nền thiếu ngày khi hết thời gian.
 - Phương án dữ liệu thực tế sau sửa lỗi đáp ứng toàn bộ nhu cầu đã khai báo; mái ấm cần lead có lớp và ACA IC trực tiếp dạy đủ năm ngày. Kiểm tra độc lập xác nhận tất cả vai trò BTC theo nhóm ô gộp, giới hạn một buổi của từng ACA IC, lịch riêng hai mái ấm và khả năng tải lại workbook.
 - Toàn bộ 48 kiểm thử vượt qua. Chín kiểm thử mới xác nhận quy tắc riêng từng mái ấm, ghép cấp 1 theo lớp khi được cấu hình, ACA IC trực tiếp dạy và làm lead, giới hạn lead một buổi, thứ tự nguồn lực TNV/BTC, tránh trùng lịch liên mái ấm, kiểm tra khóa thiếu lead và xuất–tải lại cấu hình.

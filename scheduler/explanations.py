@@ -21,7 +21,8 @@ def unmet_demands(data: Dataset, result: Result) -> list[dict[str, str]]:
             reason = "Không có ngày rảnh chung với TNV phù hợp."
         elif not common:
             reason = "TNV phù hợp có giới hạn số buổi bằng 0."
-        elif all(sum(s.volunteer == v.id for s in result.sessions) >= v.max_sessions for v in common):
+        elif all(len({(data.children[s.children[0]].site,s.day) for s in result.sessions if s.volunteer==v.id}
+                      |{(site,day) for (site,day),vid in result.leads.items() if vid==v.id}) >= v.max_sessions for v in common):
             reason = "Trong phương án hiện tại, các TNV phù hợp đều đã đạt giới hạn số buổi/tuần."
         else:
             reason = "Có ứng viên; có thể thiếu buổi, trùng lịch hoặc vướng lựa chọn khóa."
@@ -31,7 +32,8 @@ def unmet_demands(data: Dataset, result: Result) -> list[dict[str, str]]:
         if data.sites:
             reason = reason.replace("TNV", "người dạy")
         if policy and policy.require_academic_lead:
-            reason += " Mái ấm này chỉ mở lớp vào ngày có BTC ACA IC trực tiếp dạy và làm lead."
+            reason += (" Mái ấm này chỉ mở lớp vào ngày có BTC ACA IC trực tiếp dạy và làm lead." if policy.lead_must_teach
+                       else " Mái ấm này cần BTC ACA IC trực lead; buổi chỉ làm lead vẫn tính vào giới hạn tuần.")
         if common:
             if not result.optimal:
                 reason += " Thời gian xếp đã hết; phương án có thể còn cải thiện."

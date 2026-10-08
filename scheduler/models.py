@@ -35,6 +35,7 @@ class SitePolicy:
     require_academic_lead: bool = False
     pair_by_grade: bool = False
     required_days: frozenset[str] = frozenset()
+    lead_must_teach: bool = True
 
 @dataclass(frozen=True)
 class Demand:

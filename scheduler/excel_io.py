@@ -161,7 +161,10 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                 if any(f not in ("Có", "Không") for f in flags) or row["Mai_am"] in data.sites:
                     raise DataError("Quy_tac_mai_am: mã bị trùng hoặc giá trị không phải Có/Không.")
                 required_days = frozenset(day(d) for d in text(row.get("Ngay_hoc_bat_buoc")).split(";") if d.strip())
-                data.sites[text(row["Mai_am"])] = SitePolicy(*(f == "Có" for f in flags), required_days=required_days)
+                must_teach = text(row.get("Lead_bat_buoc_day")) or "Có"
+                if must_teach not in ("Có","Không"):
+                    raise DataError("Lead_bat_buoc_day phải là Có/Không.")
+                data.sites[text(row["Mai_am"])] = SitePolicy(*(f == "Có" for f in flags), required_days=required_days, lead_must_teach=must_teach=="Có")
             if any(c.site not in data.sites for c in children.values()):
                 raise DataError("Mỗi bé phải có Mai_am và mái ấm đó phải có trong Quy_tac_mai_am.")
         for r in rows("Cap_be_xung_khac"):
@@ -207,8 +210,8 @@ def input_tables(data: Dataset) -> dict[str, list[list]]:
     tables["TNV"][0] += ["Loai", "Vai_tro"]
     tables["Be"][0].append("Mai_am")
     if data.sites:
-        tables["Quy_tac_mai_am"] = [["Mai_am", "Ghep_cap_1", "Can_lead_aca_ic", "Dung_lop_thay_tuoi", "Ngay_hoc_bat_buoc"],
-            *[[site, "Có" if p.allow_primary_pairs else "Không", "Có" if p.require_academic_lead else "Không", "Có" if p.pair_by_grade else "Không", ";".join(d for d in DAYS if d in p.required_days)] for site, p in data.sites.items()]]
+        tables["Quy_tac_mai_am"] = [["Mai_am", "Ghep_cap_1", "Can_lead_aca_ic", "Dung_lop_thay_tuoi", "Ngay_hoc_bat_buoc", "Lead_bat_buoc_day"],
+            *[[site, "Có" if p.allow_primary_pairs else "Không", "Có" if p.require_academic_lead else "Không", "Có" if p.pair_by_grade else "Không", ";".join(d for d in DAYS if d in p.required_days), "Có" if p.lead_must_teach else "Không"] for site, p in data.sites.items()]]
     for v in data.volunteers.values():
         tables["TNV"].extend([v.id, s, g, v.max_sessions, v.kind, v.role] for s, g in sorted(v.skills))
         tables["Lich_ranh_TNV"].extend([v.id, d] for d in DAYS if d in v.days)

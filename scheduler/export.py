@@ -34,5 +34,5 @@ def export_workbook(data: Dataset, result: Result | None = None) -> bytes:
         if data.sites:
             for site in data.sites:
                 tables["Lich_" + site] = [headers, *[list(r.values()) for r in rows if r["Mái ấm"] == site]]
-            tables["Lead_team"] = [["Mái ấm", "Ngày", "BTC ACA IC"], *[[site, day, vid] for (site, day), vid in result.leads.items()]]
+            tables["Lead_team"] = [["Mái ấm", "Ngày", "BTC ACA IC", "Trực tiếp dạy"], *[[site, day, vid, "Có" if any(s.volunteer==vid and s.day==day and session_site(data,s)==site for s in result.sessions) else "Không"] for (site, day), vid in result.leads.items()]]
     return write_tables(tables)

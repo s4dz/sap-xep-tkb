@@ -121,3 +121,45 @@ def test_merged_role_applies_to_every_person_in_range_only():
     ws['A4']='ACA IC';ws.merge_cells('A4:A6')
     ws['A7']='PR IC';ws.merge_cells('A7:A8')
     assert [merged_cell_value(ws,i,1) for i in range(2,10)]==['WF IC','WF IC','ACA IC','ACA IC','ACA IC','PR IC','PR IC',None]
+
+def test_lead_only_does_not_need_teaching_skill_and_counts_weekly_visit():
+    d=example()
+    d.sites['s1']=SitePolicy(False,True,False,frozenset({DAYS[0]}),False)
+    d.volunteers['L']=Volunteer('L',frozenset({('Tiếng Anh',3)}),frozenset(DAYS),1,'BTC','ACA IC')
+    result=solve(d)
+    assert result.leads=={('s1',DAYS[0]):'L'}
+    assert all(s.volunteer!='L' for s in result.sessions)
+    assert read_workbook(export_workbook(d,result))==d
+    d.sites['s1']=replace(d.sites['s1'],required_days=frozenset(DAYS[:2]))
+    with pytest.raises(DataError):solve(d)
+
+def test_one_lead_cannot_cover_two_sites_same_day():
+    d=example()
+    d.children['B']=replace(d.children['B'],site='s2')
+    for site in d.sites:d.sites[site]=SitePolicy(False,True,False,frozenset({DAYS[0]}),False)
+    d.volunteers['L']=Volunteer('L',frozenset({('Toán',3)}),frozenset(DAYS),2,'BTC','ACA IC')
+    with pytest.raises(DataError):solve(d)
+
+def test_teaching_and_leading_same_site_counts_once():
+    d=example()
+    d.volunteers.pop('V')
+    d.children.pop('B');d.demands=[Demand('A','Toán')]
+    d.sites['s1']=SitePolicy(False,True,False,frozenset({DAYS[0]}),True)
+    d.volunteers['L']=Volunteer('L',frozenset({('Toán',3)}),frozenset({DAYS[0]}),1,'BTC','ACA IC')
+    result=solve(d)
+    assert len(result.sessions)==1 and result.leads=={('s1',DAYS[0]):'L'}
+
+def test_two_sites_five_days_use_ten_distinct_one_visit_leads():
+    d=week_example()
+    d.children.update({f'A{i}':Child(f'A{i}',None,3,frozenset(DAYS),'s1') for i in range(5)})
+    d.demands.extend(Demand(f'A{i}','Toán') for i in range(5))
+    d.sites['s1']=SitePolicy(False,True,False,frozenset(DAYS),False)
+    for i,day in enumerate(DAYS):
+        vid=f'K{i}'
+        d.volunteers[vid]=Volunteer(vid,frozenset({('Toán',3)}),frozenset({day}),1,'BTC','ACA IC')
+    result=solve(d)
+    assert len(result.leads)==10 and len(set(result.leads.values()))==10
+    for (site,day),vid in result.leads.items():
+        visits={(site,day)}|{(d.children[s.children[0]].site,s.day) for s in result.sessions if s.volunteer==vid}
+        assert len(visits)==1
+        if site=='s2':assert any(s.volunteer==vid and s.day==day for s in result.sessions)

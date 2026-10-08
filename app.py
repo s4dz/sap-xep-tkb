@@ -37,7 +37,7 @@ data = st.session_state.data
 if not data.sites:
     st.caption("Chế độ lớp: " + ("Cho phép ghép hai bé cùng tuổi" if data.allow_group_sessions else "Chỉ dạy 1:1") + ". Bé chưa có tuổi chỉ được xếp 1:1.")
 if data.sites:
-    st.info("Áp dụng quy tắc riêng từng mái ấm. Mái ấm cần ACA IC chỉ mở lớp khi có BTC ACA IC trực tiếp dạy và làm lead; số buổi người dạy được kiểm tra trên cả hai mái ấm.")
+    st.info("Áp dụng quy tắc riêng từng mái ấm. ACA IC làm lead theo từng ngày; mái ấm yêu cầu lead dạy sẽ kiểm tra cả lớp được phân công. Buổi chỉ làm lead vẫn tính vào giới hạn tuần và được kiểm tra trùng lịch giữa hai mái ấm.")
 columns = st.columns(3)
 for col, label, value in zip(columns, ["Người dạy" if data.sites else "Tình nguyện viên", "Bé", "Nhu cầu môn học"], [len(data.volunteers), len(data.children), len(data.demands)]):
     col.metric(label, value)
@@ -113,6 +113,9 @@ with schedule:
                 st.dataframe(pd.DataFrame(site_rows), hide_index=True, width="stretch")
         else:
             st.dataframe(pd.DataFrame(display_rows, columns=HEADERS), hide_index=True, width="stretch")
+        if result.leads:
+            st.subheader("Lead team theo ngày")
+            st.dataframe(pd.DataFrame([{"Mái ấm":site,"Ngày":day,"ACA IC":vid,"Trực tiếp dạy":"Có" if any(s.volunteer==vid and s.day==day and data.children[s.children[0]].site==site for s in result.sessions) else "Không"} for (site,day),vid in result.leads.items()]),hide_index=True)
         for idx, session in enumerate(result.sessions):
             keys = {Lock(session.volunteer, c, session.subject, session.day) for c in session.children}
             fully_locked = keys <= data.locks
