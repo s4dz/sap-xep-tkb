@@ -6,7 +6,7 @@ import streamlit as st
 from scheduler.models import DataError, Lock
 from scheduler.excel_io import read_workbook
 from scheduler.engine import solve, validate_locks, eligible
-from scheduler.export import export_workbook, schedule_rows, HEADERS
+from scheduler.export import export_workbook, schedule_rows, timetable_grid, HEADERS
 from scheduler.explanations import unmet_demands
 
 st.set_page_config(page_title="Sắp xếp thời khóa biểu", page_icon="📅", layout="wide")
@@ -110,7 +110,10 @@ with schedule:
             for site in data.sites:
                 st.subheader(site)
                 site_rows = [r for r in display_rows if r["Mái ấm"] == site]
-                st.dataframe(pd.DataFrame(site_rows), hide_index=True, width="stretch")
+                grid=timetable_grid(data,result,site)
+                st.dataframe(pd.DataFrame(grid[1:],columns=grid[0]).astype(str),hide_index=True,width="stretch",row_height=60)
+                with st.expander("Xem danh sách phân công chi tiết — " + site):
+                    st.dataframe(pd.DataFrame(site_rows),hide_index=True,width="stretch")
         else:
             st.dataframe(pd.DataFrame(display_rows, columns=HEADERS), hide_index=True, width="stretch")
         if result.leads:

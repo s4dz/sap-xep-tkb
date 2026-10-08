@@ -1,9 +1,10 @@
 """Read, normalize and validate the documented workbook schema."""
 from io import BytesIO
+from dataclasses import replace
 from pathlib import Path
 import unicodedata
 from openpyxl import load_workbook, Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from .models import CATALOG, DAYS, Child, Dataset, DataError, Demand, Lock, Volunteer, SitePolicy, level
 
 SCHEMA = {
@@ -107,7 +108,15 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                 raise DataError("Mã bé trống hoặc trùng.")
             days = frozenset(day(d) for d in text(r["Ngay_ranh"]).split(";"))
             age = integer(r["Tuoi"], 1, 25) if text(r["Tuoi"]) else None
-            children[cid] = Child(cid, age, integer(r["Lop"], 1, 12), days, text(r.get("Mai_am")))
+            children[cid] = Child(cid, age, integer(r["Lop"], 1, 12), days, text(r.get("Mai_am")), text(r.get("Ma_nguon") or r.get("Mã nguồn")))
+        if "TKB_nguon" in wb.sheetnames:
+            source_rows=list(wb["TKB_nguon"].values)
+            source_headers=[text(v) for v in source_rows[0]] if source_rows else []
+            if {"Mã bé","Mã trong TKB"}<=set(source_headers):
+                for raw in source_rows[1:]:
+                    source_row=dict(zip(source_headers,raw))
+                    cid=text(source_row.get("Mã bé"));source_id=text(source_row.get("Mã trong TKB"))
+                    if cid in children and source_id:children[cid]=replace(children[cid],source_id=source_id)
         skills, limits, kinds, roles = {}, {}, {}, {}
         for r in rows("TNV"):
             vid = text(r["Ma_TNV"])
@@ -209,13 +218,14 @@ def input_tables(data: Dataset) -> dict[str, list[list]]:
     tables["Cau_hinh"].append(["Uu_tien_nguon_luc", "Có" if data.prioritize_volunteers else "Không"])
     tables["TNV"][0] += ["Loai", "Vai_tro"]
     tables["Be"][0].append("Mai_am")
+    tables["Be"][0].append("Ma_nguon")
     if data.sites:
         tables["Quy_tac_mai_am"] = [["Mai_am", "Ghep_cap_1", "Can_lead_aca_ic", "Dung_lop_thay_tuoi", "Ngay_hoc_bat_buoc", "Lead_bat_buoc_day"],
             *[[site, "Có" if p.allow_primary_pairs else "Không", "Có" if p.require_academic_lead else "Không", "Có" if p.pair_by_grade else "Không", ";".join(d for d in DAYS if d in p.required_days), "Có" if p.lead_must_teach else "Không"] for site, p in data.sites.items()]]
     for v in data.volunteers.values():
         tables["TNV"].extend([v.id, s, g, v.max_sessions, v.kind, v.role] for s, g in sorted(v.skills))
         tables["Lich_ranh_TNV"].extend([v.id, d] for d in DAYS if d in v.days)
-    tables["Be"].extend([c.id, c.age, c.grade, ";".join(d for d in DAYS if d in c.days), c.site] for c in data.children.values())
+    tables["Be"].extend([c.id, c.age, c.grade, ";".join(d for d in DAYS if d in c.days), c.site, c.source_id] for c in data.children.values())
     tables["Nhu_cau_be"].extend([d.child, d.subject] for d in data.demands)
     tables["Insight_be"].extend([cid, note] for cid, note in data.insights.items())
     tables["Cap_be_xung_khac"].extend(sorted(pair) for pair in sorted(data.conflicts, key=lambda p: sorted(p)))
@@ -248,6 +258,41 @@ def write_tables(tables: dict[str, list[list]]) -> bytes:
         ws.auto_filter.ref = ws.dimensions
         for column in ws.columns:
             ws.column_dimensions[column[0].column_letter].width = min(55, max(18, max(len(text(c.value)) for c in column) + 2))
+        if name.startswith('TKB_'):
+            blue='3F7AD3'
+            line=Side(style='thin',color='8494A8')
+            for row in ws:
+                for c in row:
+                    c.font=Font(name='Arial',size=11)
+                    c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True)
+                    c.border=Border(left=line,right=line,top=line,bottom=line)
+            for rownum in (1,2):
+                ws.merge_cells(start_row=rownum,start_column=1,end_row=rownum,end_column=8)
+                ws.cell(rownum,1).font=Font(name='Arial',size=16 if rownum==1 else 11,bold=rownum==1,color='FFFFFF' if rownum==1 else '234E70')
+                ws.cell(rownum,1).fill=PatternFill('solid',fgColor=blue if rownum==1 else 'EFF5FD')
+                ws.row_dimensions[rownum].height=32 if rownum==1 else 25
+            for c in ws[3]:
+                c.fill=PatternFill('solid',fgColor=blue);c.font=Font(name='Arial',size=11,bold=True,color='FFFFFF')
+            ws.row_dimensions[3].height=30
+            for rownum in range(4,ws.max_row-1):
+                ws.row_dimensions[rownum].height=48
+                for col in (1,2):ws.cell(rownum,col).fill=PatternFill('solid',fgColor='FFF2CC')
+                ws.cell(rownum,3).fill=PatternFill('solid',fgColor='D9E5F7')
+                for col in range(4,9):
+                    c=ws.cell(rownum,col)
+                    if c.value:c.fill=PatternFill('solid',fgColor='E4F2E8' if 'ghép' in str(c.value) else 'EFF5FD')
+            for rownum in (ws.max_row-1,ws.max_row):
+                ws.merge_cells(start_row=rownum,start_column=1,end_row=rownum,end_column=3)
+                ws.cell(rownum,1).fill=PatternFill('solid',fgColor=blue)
+                ws.cell(rownum,1).font=Font(name='Arial',bold=True,color='FFFFFF')
+                ws.row_dimensions[rownum].height=44
+            ws.merge_cells(start_row=ws.max_row,start_column=4,end_row=ws.max_row,end_column=8)
+            for col,width in zip('ABCDEFGH',(6,18,8,26,26,26,26,26)):ws.column_dimensions[col].width=width
+            ws.auto_filter.ref=None;ws.freeze_panes='D4'
+            ws.sheet_properties.pageSetUpPr.fitToPage=True
+            ws.page_setup.orientation='landscape';ws.page_setup.paperSize=ws.PAPERSIZE_A3
+            ws.page_setup.fitToWidth=1;ws.page_setup.fitToHeight=1
+            ws.print_options.horizontalCentered=True;ws.print_area=f'A1:H{ws.max_row}'
     output = BytesIO()
     wb.save(output)
     return output.getvalue()

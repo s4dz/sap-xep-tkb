@@ -62,6 +62,8 @@ Sheet `TNV` được dùng chung cho người dạy, có thêm cột `Loai` (`TN
 
 Giao diện hiển thị bảng riêng cho từng mái ấm. File kết quả có thêm `Lich_<mã mái ấm>` và `Lead_team`, đồng thời giữ đầy đủ cấu hình để tải lại. Bộ xếp giải chung nguồn lực để tránh hai lịch riêng phân công trùng người.
 
+Bảng thời khóa biểu chính có mỗi bé một hàng, năm ngày trong tuần là năm cột, giống bố cục workbook nguồn. Mỗi ô ghi môn, mã người dạy và ký hiệu ghép/lead khi có. Hàng `LEAD TEAM` và `GHI CHÚ` nằm dưới bảng. File Excel đặt hai trang `TKB_<mã mái ấm>` ở đầu, có màu tiêu đề, đường viền và mã bé nguồn; các bảng chi tiết vẫn dùng để kiểm tra và khóa buổi. Cột tùy chọn `Be.Ma_nguon` giữ mã bé trong workbook nguồn khi xuất–tải lại; nếu trống, bảng dùng `Ma_be`.
+
 Cột tùy chọn `Quy_tac_mai_am.Ngay_hoc_bat_buoc` ghi các ngày phải có lớp, phân tách bằng `;`. Cả hai mái ấm dùng Thứ Hai–Thứ Sáu theo xác nhận. Mỗi ngày phải có lớp và một ACA IC làm lead theo điều kiện `Lead_bat_buoc_day`; nếu dữ liệu không thể đáp ứng, ứng dụng báo lỗi thay vì trả lịch thiếu ngày hoặc lead. Để trống cột ngày nếu không bắt buộc mở lớp vào ngày cụ thể.
 
 Khi chuẩn hóa workbook nguồn có ô gộp, lấy giá trị ô đầu vùng gộp cho mọi dòng thuộc đúng vùng đó. Đặc biệt, vai trò ACA IC trong vùng A10:A19 áp dụng cho cả nhóm người, không chỉ dòng đầu tiên. Giới hạn một buổi/tuần được áp dụng cho từng ACA IC trong nhóm. Các ô trống ngoài vùng gộp giữ nguyên là trống.

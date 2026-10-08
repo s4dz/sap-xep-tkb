@@ -27,6 +27,7 @@ class Child:
     grade: int
     days: frozenset[str]
     site: str = ""
+    source_id: str = ""
 
 @dataclass(frozen=True)
 class SitePolicy:
