@@ -32,6 +32,8 @@ Môi trường `.venv` trên máy triển khai đã được cài thư viện. C
 
 Trong tab **TNV và BTC**, tìm người theo mã/ban, sửa ngày rảnh, môn theo từng lớp và số buổi tối đa; hoặc thêm người mới. Đặt **0 buổi** để tạm ngưng. ACA IC được tối đa một buổi (kể cả chỉ làm lead); TNV và BTC ban khác được tối đa hai buổi. Thay đổi làm lịch cũ cần cập nhật, nên hãy xếp lại trước khi tải kết quả.
 
+Sheet tùy chọn **Ngoai_le_chuyen_mon** gồm `Ma_TNV`, `Mon`, `Lop`: ghi các môn/lớp người đó không thể dạy. Ngoại lệ được ưu tiên hơn quy tắc linh hoạt Hóa → KHTN, được giữ khi lưu/tải dữ liệu và hiện trong phần chỉnh sửa người dạy.
+
 Nhấn **Lưu dữ liệu trên máy này** để lưu tiến độ tại `data/private/du_lieu_dang_sua.xlsx`. Lần mở sau ứng dụng ưu tiên bản đã lưu; dữ liệu gốc được giữ. File này được loại khỏi Git. Có thể tải bản Excel ở cuối trang để sao lưu hoặc chuyển sang máy khác. Thay nguồn dữ liệu sẽ bắt đầu phiên mới; hãy lưu trước khi chuyển nguồn hoặc đóng trang.
 
 ## Cấu trúc workbook

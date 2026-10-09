@@ -57,3 +57,4 @@ def remove_staff(data, identifier):
     data.interviews.pop(identifier, None)
     data.ratings = {pair: rating for pair, rating in data.ratings.items() if pair[0] != identifier}
     data.locks = {lock for lock in data.locks if lock.volunteer != identifier}
+    data.skill_exclusions = {rule for rule in data.skill_exclusions if rule[0] != identifier}

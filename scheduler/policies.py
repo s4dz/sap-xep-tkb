@@ -9,7 +9,8 @@ def teaching_skills(data: Dataset, volunteer: str) -> frozenset[tuple[str,int]]:
             if subject=='Hóa học' and grade>=6:
                 skills.update((s,grade) for s in ('Vật lý','Hóa học','Sinh học'))
                 if grade<=9:skills.add(('Khoa học tự nhiên',grade))
-    return frozenset(skills)
+    return frozenset((subject, grade) for subject, grade in skills
+                     if (volunteer, subject, grade) not in data.skill_exclusions)
 
 def can_pair(data: Dataset, a: str, b: str) -> bool:
     """Unknown ages never imply equal ages; same-grade proxy must be explicit."""

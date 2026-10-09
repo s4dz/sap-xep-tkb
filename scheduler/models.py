@@ -73,6 +73,7 @@ class Dataset:
     flexible_science: bool = False
     prioritize_other_btc: bool = False
     prefer_pairs: bool = False
+    skill_exclusions: set[tuple[str, str, int]] = field(default_factory=set)
 
 @dataclass
 class Result:

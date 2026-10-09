@@ -209,6 +209,21 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                     if not text(r["Cau_hoi"]):
                         raise DataError("Câu trả lời phải có câu hỏi tương ứng.")
                     data.interviews.setdefault(vid, []).append((text(r["Cau_hoi"]), text(answer)))
+        if "Ngoai_le_chuyen_mon" in wb.sheetnames:
+            exception_rows = list(wb["Ngoai_le_chuyen_mon"].values)
+            headers = [text(v) for v in exception_rows[0]] if exception_rows else []
+            if not {"Ma_TNV", "Mon", "Lop"} <= set(headers):
+                raise DataError("Sheet Ngoai_le_chuyen_mon: cần cột Ma_TNV, Mon, Lop.")
+            for index, values in enumerate(exception_rows[1:], 2):
+                if not any(text(v) for v in values):
+                    continue
+                context = f"Sheet Ngoai_le_chuyen_mon, hàng {index}: "
+                row = dict(zip(headers, values))
+                vid = reference(row["Ma_TNV"], volunteers, "người dạy")
+                sub, grade = subject(row["Mon"]), integer(row["Lop"], 1, 12)
+                if sub not in CATALOG[level(grade)]:
+                    raise DataError("Môn không thuộc danh mục lớp.")
+                data.skill_exclusions.add((vid, sub, grade))
         if not children or not volunteers or not demands:
             raise DataError("Cần ít nhất một TNV, một bé và một nhu cầu.")
         return data
@@ -218,6 +233,8 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
 def input_tables(data: Dataset) -> dict[str, list[list]]:
     """Serialize the current human decisions for a reloadable workbook."""
     tables = {name: [headers.copy()] for name, headers in SCHEMA.items()}
+    if data.skill_exclusions:
+        tables["Ngoai_le_chuyen_mon"] = [["Ma_TNV", "Mon", "Lop"], *[list(rule) for rule in sorted(data.skill_exclusions)]]
     tables["Cau_hinh"] = [["Tham_so", "Gia_tri"], ["Che_do_lop", "Cho phép ghép hai bé" if data.allow_group_sessions else "Chỉ 1:1"]]
     tables["Cau_hinh"].append(["Uu_tien_nguon_luc", "Có" if data.prioritize_volunteers else "Không"])
     for setting,attribute in [('Linh_hoat_Hoa_KHTN','flexible_science'),('BTC_ban_khac_truoc_ACA','prioritize_other_btc'),('Uu_tien_lop_ghep','prefer_pairs')]:

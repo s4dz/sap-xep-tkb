@@ -25,6 +25,10 @@ def render_staff(data, changed):
     st.dataframe(pd.DataFrame([{"Mã": v.id, "Loại": v.kind, "Ban / vai trò": v.role, "Ngày rảnh": ", ".join(d for d in DAYS if d in v.days), "Buổi/tuần": v.max_sessions, "Môn theo khối": skills_summary(v.skills)} for v in visible]), hide_index=True, width="stretch")
     selected = st.selectbox("Người cần chỉnh sửa", ["Thêm người mới"] + [v.id for v in visible], key="staff_selected")
     person = data.volunteers.get(selected)
+    if person:
+        excluded = {(subject, grade) for vid, subject, grade in data.skill_exclusions if vid == person.id}
+        if excluded:
+            st.info("Ngoại lệ chuyên môn — không phân công: " + skills_summary(excluded))
     revision = st.session_state.revision
     prefix = f"staff_{selected}_{revision}"
     with st.form(prefix):
