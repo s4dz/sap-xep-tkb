@@ -3,12 +3,12 @@ from itertools import combinations
 from time import monotonic
 from ortools.sat.python import cp_model
 from .models import DAYS, Dataset, DataError, Lock, Result, Session
-from .policies import can_pair, is_academic_lead, pick_leads, session_site
+from .policies import can_pair, is_academic_lead, pick_leads, session_site, teaching_skills
 
 def eligible(data: Dataset, volunteer: str, child: str, subject: str) -> bool:
     """Check teaching registration and manual exclusion, without reading notes."""
     v, c = data.volunteers[volunteer], data.children[child]
-    return (subject, c.grade) in v.skills and data.ratings.get((volunteer, child)) != "Không ghép"
+    return (subject, c.grade) in teaching_skills(data,volunteer) and data.ratings.get((volunteer, child)) != "Không ghép"
 
 def candidates(data: Dataset) -> list[Session]:
     """Enumerate legal single-child and two-child sessions."""
@@ -167,10 +167,14 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
     objectives = [sum(covered), sum(len(s.children) * x[i] for i, s in enumerate(choices)),
                   sum(sum(data.ratings.get((s.volunteer, c)) == "Ưu tiên" for c in s.children) * x[i]
                       for i, s in enumerate(choices)),
-                  -sum(x[i] for i, s in enumerate(choices) if len(s.children) == 2), -sum(loads)]
+                  (1 if data.prefer_pairs else -1)*sum(x[i] for i, s in enumerate(choices) if len(s.children) == 2), -sum(loads)]
     if data.prioritize_volunteers:
         btc_sessions = sum(x[i] for i, s in enumerate(choices) if data.volunteers[s.volunteer].kind == "BTC")
-        objectives[2:2] = [-btc_sessions, -sum(second_sessions)]
+        if data.prioritize_other_btc:
+            aca_sessions=sum(x[i] for i,s in enumerate(choices) if is_academic_lead(data,s.volunteer))
+            objectives[2:2] = [-aca_sessions, -(btc_sessions-aca_sessions), -sum(second_sessions)]
+        else:
+            objectives[2:2] = [-btc_sessions, -sum(second_sessions)]
     # The validated locks themselves form a feasible baseline, including before
     # the first search finds an incumbent.
     baseline = {}

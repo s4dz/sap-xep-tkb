@@ -1,6 +1,16 @@
 """Shared hard rules for site separation, child pairs and academic leads."""
 from .models import DAYS, Dataset, Session
 
+def teaching_skills(data: Dataset, volunteer: str) -> frozenset[tuple[str,int]]:
+    """Apply explicitly enabled chemistry-to-science flexibility at the same grade."""
+    skills=set(data.volunteers[volunteer].skills)
+    if data.flexible_science:
+        for subject,grade in list(skills):
+            if subject=='Hóa học' and grade>=6:
+                skills.update((s,grade) for s in ('Vật lý','Hóa học','Sinh học'))
+                if grade<=9:skills.add(('Khoa học tự nhiên',grade))
+    return frozenset(skills)
+
 def can_pair(data: Dataset, a: str, b: str) -> bool:
     """Unknown ages never imply equal ages; same-grade proxy must be explicit."""
     first, second = data.children[a], data.children[b]

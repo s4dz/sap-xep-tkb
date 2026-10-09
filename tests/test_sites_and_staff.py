@@ -163,3 +163,43 @@ def test_two_sites_five_days_use_ten_distinct_one_visit_leads():
         visits={(site,day)}|{(d.children[s.children[0]].site,s.day) for s in result.sessions if s.volunteer==vid}
         assert len(visits)==1
         if site=='s2':assert any(s.volunteer==vid and s.day==day for s in result.sessions)
+
+def test_chemistry_flexibility_requires_flag_and_keeps_grade():
+    from scheduler.engine import eligible
+    d=example()
+    d.children['A']=replace(d.children['A'],grade=11)
+    d.volunteers['V']=replace(d.volunteers['V'],skills=frozenset({('Hóa học',11)}))
+    assert not eligible(d,'V','A','Vật lý')
+    d.flexible_science=True
+    assert eligible(d,'V','A','Vật lý') and eligible(d,'V','A','Sinh học')
+    assert not eligible(d,'V','A','Toán')
+    d.children['A']=replace(d.children['A'],grade=10)
+    assert not eligible(d,'V','A','Vật lý')
+
+def test_secondary_chemistry_can_cover_integrated_science_when_enabled():
+    from scheduler.engine import eligible
+    d=example();d.flexible_science=True
+    d.children['A']=replace(d.children['A'],grade=8)
+    d.volunteers['V']=replace(d.volunteers['V'],skills=frozenset({('Hóa học',8)}))
+    assert eligible(d,'V','A','Khoa học tự nhiên')
+
+def test_other_btc_before_aca_then_tnv_before_both():
+    d=example();d.prioritize_other_btc=True
+    d.children.pop('B');d.demands=[Demand('A','Toán')]
+    v=d.volunteers.pop('V')
+    d.volunteers['ACA']=replace(v,id='ACA',kind='BTC',role='ACA IC')
+    d.volunteers['OTHER']=replace(v,id='OTHER',kind='BTC',role='WF IC')
+    assert solve(d).sessions[0].volunteer=='OTHER'
+    d.volunteers['V']=v
+    assert solve(d).sessions[0].volunteer=='V'
+
+def test_prefer_pairs_uses_approved_pair_instead_of_two_singles():
+    d=example();d.prefer_pairs=True
+    result=solve(d)
+    assert len(result.sessions)==1 and len(result.sessions[0].children)==2
+    d.sites['s1']=SitePolicy(False,False,False)
+    assert all(len(s.children)==1 for s in solve(d).sessions)
+
+def test_flexible_resource_and_pair_preferences_roundtrip():
+    d=example();d.flexible_science=d.prioritize_other_btc=d.prefer_pairs=True
+    assert read_workbook(export_workbook(d,solve(d)))==d

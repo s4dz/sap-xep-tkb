@@ -70,6 +70,9 @@ class Dataset:
     allow_group_sessions: bool = True
     sites: dict[str, SitePolicy] = field(default_factory=dict)
     prioritize_volunteers: bool = False
+    flexible_science: bool = False
+    prioritize_other_btc: bool = False
+    prefer_pairs: bool = False
 
 @dataclass
 class Result:

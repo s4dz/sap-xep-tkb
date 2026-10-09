@@ -1,6 +1,7 @@
 """Transparent possible causes, without claiming a unique causal explanation."""
 from .models import Dataset, Result
 from .engine import eligible
+from .policies import teaching_skills
 
 def unmet_demands(data: Dataset, result: Result) -> list[dict[str, str]]:
     satisfied = {(c, s.subject) for s in result.sessions for c in s.children}
@@ -10,7 +11,7 @@ def unmet_demands(data: Dataset, result: Result) -> list[dict[str, str]]:
         if (d.child, d.subject) in satisfied:
             continue
         c = data.children[d.child]
-        skilled = [v for v in data.volunteers.values() if (d.subject, c.grade) in v.skills]
+        skilled = [v for v in data.volunteers.values() if (d.subject, c.grade) in teaching_skills(data,v.id)]
         permitted = [v for v in skilled if eligible(data, v.id, c.id, d.subject)]
         common = [v for v in permitted if v.days & c.days and v.max_sessions > 0]
         if not skilled:

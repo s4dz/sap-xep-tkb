@@ -38,6 +38,9 @@ if not data.sites:
     st.caption("Chế độ lớp: " + ("Cho phép ghép hai bé cùng tuổi" if data.allow_group_sessions else "Chỉ dạy 1:1") + ". Bé chưa có tuổi chỉ được xếp 1:1.")
 if data.sites:
     st.info("Áp dụng quy tắc riêng từng mái ấm. ACA IC làm lead theo từng ngày; mái ấm yêu cầu lead dạy sẽ kiểm tra cả lớp được phân công. Buổi chỉ làm lead vẫn tính vào giới hạn tuần và được kiểm tra trùng lịch giữa hai mái ấm.")
+    if data.prioritize_other_btc:st.caption("Ưu tiên người dạy: TNV → BTC ban khác → BTC ACA IC. ACA IC bắt buộc dạy tại mái ấm có yêu cầu riêng.")
+    if data.flexible_science:st.caption("Đã bật linh hoạt Hóa → Lý–Hóa–Sinh cùng lớp/cấp; cấp 2 được nhận KHTN tổng hợp.")
+    if data.prefer_pairs:st.caption("Ưu tiên thêm lớp ghép hợp lệ tại mái ấm cho phép ghép.")
 columns = st.columns(3)
 for col, label, value in zip(columns, ["Người dạy" if data.sites else "Tình nguyện viên", "Bé", "Nhu cầu môn học"], [len(data.volunteers), len(data.children), len(data.demands)]):
     col.metric(label, value)

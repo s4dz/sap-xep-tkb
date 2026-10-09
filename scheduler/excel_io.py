@@ -157,6 +157,10 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
         if tier_setting not in ("Có", "Không"):
             raise DataError("Cau_hinh.Uu_tien_nguon_luc phải là Có/Không.")
         data.prioritize_volunteers = tier_setting == "Có"
+        for setting,attribute in [('Linh_hoat_Hoa_KHTN','flexible_science'),('BTC_ban_khac_truoc_ACA','prioritize_other_btc'),('Uu_tien_lop_ghep','prefer_pairs')]:
+            flag=settings.get(setting,'Không')
+            if flag not in ('Có','Không'):raise DataError(f'Cau_hinh.{setting} phải là Có/Không.')
+            setattr(data,attribute,flag=='Có')
         if "Quy_tac_mai_am" in wb.sheetnames:
             site_rows = list(wb["Quy_tac_mai_am"].values)
             headers = [text(c) for c in site_rows[0]] if site_rows else []
@@ -216,6 +220,8 @@ def input_tables(data: Dataset) -> dict[str, list[list]]:
     tables = {name: [headers.copy()] for name, headers in SCHEMA.items()}
     tables["Cau_hinh"] = [["Tham_so", "Gia_tri"], ["Che_do_lop", "Cho phép ghép hai bé" if data.allow_group_sessions else "Chỉ 1:1"]]
     tables["Cau_hinh"].append(["Uu_tien_nguon_luc", "Có" if data.prioritize_volunteers else "Không"])
+    for setting,attribute in [('Linh_hoat_Hoa_KHTN','flexible_science'),('BTC_ban_khac_truoc_ACA','prioritize_other_btc'),('Uu_tien_lop_ghep','prefer_pairs')]:
+        tables['Cau_hinh'].append([setting,'Có' if getattr(data,attribute) else 'Không'])
     tables["TNV"][0] += ["Loai", "Vai_tro"]
     tables["Be"][0].append("Mai_am")
     tables["Be"][0].append("Ma_nguon")

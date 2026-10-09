@@ -2,6 +2,7 @@
 
 Cập nhật ngày 09/10/2026:
 
+- Toàn bộ 61 kiểm thử vượt qua sau bổ sung linh hoạt Hóa → Lý–Hóa–Sinh, nhận KHTN tổng hợp ở cấp 2, giữ đúng lớp đăng ký, ưu tiên BTC ban khác trước ACA IC, ưu tiên lớp ghép hợp lệ và xuất–tải lại ba cờ cấu hình mới.
 - Bổ sung bảng thời khóa biểu theo tuần, mỗi bé một hàng và năm ngày thành cột, có hàng lead/ghi chú. Kiểm tra dữ liệu đối chiếu từng ô với danh sách buổi học, bảo toàn mã bé nguồn khi tải lại và kiểm tra trực quan cả hai trang TKB trong workbook kết quả.
 - Sau bổ sung ACA IC làm lead ở cả hai mái ấm, toàn bộ 56 kiểm thử vượt qua. Bốn kiểm thử mới xác nhận lead không dạy không cần chuyên môn đứng lớp, buổi chỉ làm lead vẫn tiêu thụ giới hạn tuần, không trực hai mái ấm cùng ngày, dạy và lead tại cùng mái ấm chỉ tính một buổi, và mười vị trí lead dùng mười ACA IC khác nhau khi mỗi người chỉ đi một buổi.
 - Đợt xếp với lead đủ hai mái ấm tiếp tục đáp ứng toàn bộ nhu cầu đã khai báo, với đủ mười phân công lead trong tuần. Workbook có bảng đối chiếu nhu cầu theo bé–môn, tách số buổi dạy và số buổi đi dạy/trực lead để kiểm tra giới hạn tuần.
