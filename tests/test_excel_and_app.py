@@ -58,6 +58,7 @@ def test_unmet_reasons():
 
 def test_app_end_to_end():
     app = AppTest.from_file(Path("app.py").resolve(), default_timeout=30).run()
+    next(s for s in app.selectbox if s.label == "Dữ liệu làm việc").set_value("Dữ liệu mẫu").run()
     assert not app.exception
     next(b for b in app.button if b.label == "Xếp thời khóa biểu").click().run()
     assert not app.exception
@@ -67,7 +68,7 @@ def test_app_end_to_end():
     next(b for b in app.button if b.label == "Xếp lại, giữ lựa chọn khóa").click().run()
     assert not app.exception
     assert app.session_state.data.locks == locks
-    app.radio[0].set_value("Không ghép")
+    next(r for r in app.radio if r.label == "Đánh giá cặp").set_value("Không ghép")
     next(b for b in app.button if b.label == "Lưu đánh giá").click().run()
     assert not app.exception
     assert app.error  # The sample's locked pair is now forbidden.

@@ -22,7 +22,7 @@ Môi trường `.venv` trên máy triển khai đã được cài thư viện. C
 
 ## Luồng sử dụng
 
-1. Chọn **Dùng dữ liệu mẫu** hoặc tải một file `.xlsx`. Lỗi cấu trúc và giá trị được báo kèm sheet/hàng.
+1. Chọn **Dữ liệu làm việc** (dữ liệu hai mái ấm hiện tại, dữ liệu đã lưu trên máy hoặc dữ liệu mẫu) hoặc tải một file `.xlsx`. Lỗi cấu trúc và giá trị được báo kèm sheet/hàng.
 2. Xem số TNV, bé, nhu cầu và bảng dữ liệu đầu vào.
 3. Trong **Duyệt cặp và lựa chọn khóa**, chọn mã TNV và bé; xem câu hỏi/câu trả lời phỏng vấn và ghi chú; lưu **Ưu tiên / Bình thường / Không ghép**. Ghi chú không tác động tự động đến lịch.
 4. Trong **Thời khóa biểu**, nhấn **Xếp thời khóa biểu**. Xem lịch, bé chưa có buổi và từng nhu cầu chưa đáp ứng.
@@ -30,7 +30,9 @@ Môi trường `.venv` trên máy triển khai đã được cài thư viện. C
 6. Nhấn **Xếp lại, giữ lựa chọn khóa** sau khi thay đổi. Khi dữ liệu duyệt thay đổi, lịch cũ được đánh dấu cần cập nhật và không được tải xuống như lịch hiện hành.
 7. **Tải kết quả Excel** chứa lịch, nhu cầu chưa đáp ứng, tổng quan và toàn bộ dữ liệu đầu vào. **Lưu dữ liệu, đánh giá và khóa hiện tại** dùng để lưu tiến độ kể cả khi các khóa đang mâu thuẫn. Tải lại một trong hai file này ở lần sử dụng sau.
 
-Thay file đầu vào sẽ bắt đầu phiên dữ liệu mới. Thay đổi chỉ nằm trong bộ nhớ phiên cho tới khi tải xuống; không tự ghi đè file trên máy. Không đưa dữ liệu thật vào Git; lưu file thực tế ngoài thư mục dự án.
+Trong tab **TNV và BTC**, tìm người theo mã/ban, sửa ngày rảnh, môn theo từng lớp và số buổi tối đa; hoặc thêm người mới. Đặt **0 buổi** để tạm ngưng. ACA IC được tối đa một buổi (kể cả chỉ làm lead); TNV và BTC ban khác được tối đa hai buổi. Thay đổi làm lịch cũ cần cập nhật, nên hãy xếp lại trước khi tải kết quả.
+
+Nhấn **Lưu dữ liệu trên máy này** để lưu tiến độ tại `data/private/du_lieu_dang_sua.xlsx`. Lần mở sau ứng dụng ưu tiên bản đã lưu; dữ liệu gốc được giữ. File này được loại khỏi Git. Có thể tải bản Excel ở cuối trang để sao lưu hoặc chuyển sang máy khác. Thay nguồn dữ liệu sẽ bắt đầu phiên mới; hãy lưu trước khi chuyển nguồn hoặc đóng trang.
 
 ## Cấu trúc workbook
 

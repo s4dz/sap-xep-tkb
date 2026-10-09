@@ -27,3 +27,7 @@ Ngày kiểm chứng: 07/10/2026.
 - Máy chủ Streamlit local khởi động thành công; điểm kiểm tra hoạt động trả HTTP 200.
 
 Kiểm thử tự động không thay thế thử nghiệm với dữ liệu thực tế. Chưa đo hiệu năng trên tập dữ liệu lớn và chưa chạy luồng tương tác trực tiếp trong trình duyệt.
+# Quản lý người dạy trên web
+
+Đã kiểm tra cập nhật ngày rảnh qua biểu mẫu, thêm TNV mới, lưu và đọc lại thông tin người dạy qua Excel, tạm ngưng người dạy và giới hạn một buổi của ACA IC. Sửa người dạy đánh dấu lịch cũ cần cập nhật và chặn tải kết quả cũ. Các khóa vẫn được giữ để báo mâu thuẫn nếu ngày rảnh hoặc môn dạy thay đổi. Bộ kiểm thử hiện có 64 kiểm tra thành công.
+

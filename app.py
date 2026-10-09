@@ -8,16 +8,23 @@ from scheduler.excel_io import read_workbook
 from scheduler.engine import solve, validate_locks, eligible
 from scheduler.export import export_workbook, schedule_rows, timetable_grid, HEADERS
 from scheduler.explanations import unmet_demands
+from staff_ui import render_staff
 
 st.set_page_config(page_title="Sắp xếp thời khóa biểu", page_icon="📅", layout="wide")
 st.title("Sắp xếp thời khóa biểu")
 st.caption("Tình nguyện viên và các bé · Thứ Hai–Thứ Sáu · 18:00–20:00")
-st.write("Tải dữ liệu, duyệt các cặp phù hợp, rồi xếp lịch. Những lựa chọn đã khóa sẽ được giữ khi xếp lại.")
+st.write("Sửa TNV và BTC, duyệt các cặp phù hợp, rồi xếp lịch. Những lựa chọn đã khóa sẽ được giữ khi xếp lại.")
 sample = Path(__file__).parent / "data" / "du_lieu_mau.xlsx"
 st.download_button("Tải file mẫu", sample.read_bytes(), "du_lieu_mau.xlsx")
 uploaded = st.file_uploader("Tải lên file Excel", type=["xlsx"])
-use_sample = st.checkbox("Dùng dữ liệu mẫu", value=uploaded is None)
-raw = uploaded.getvalue() if uploaded else sample.read_bytes() if use_sample else None
+current = Path(__file__).parent / "outputs" / "2026-10-09" / "du_lieu_hai_mai_am.xlsx"
+saved = Path(__file__).parent / "data" / "private" / "du_lieu_dang_sua.xlsx"
+sources = {}
+if saved.exists(): sources["Dữ liệu đã lưu trên máy"] = saved
+if current.exists(): sources["Dữ liệu hai mái ấm hiện tại"] = current
+sources["Dữ liệu mẫu"] = sample
+source_choice = st.selectbox("Dữ liệu làm việc", list(sources), disabled=uploaded is not None)
+raw = uploaded.getvalue() if uploaded else sources[source_choice].read_bytes()
 if raw is None:
     st.info("Tải lên file Excel hoặc chọn dùng dữ liệu mẫu để bắt đầu.")
     st.stop()
@@ -28,6 +35,9 @@ if st.session_state.get("fingerprint") != fingerprint:
     except DataError as exc:
         st.error(str(exc))
         st.stop()
+    for key in list(st.session_state):
+        if key.startswith("staff_"):
+            del st.session_state[key]
     st.session_state.data = data
     st.session_state.fingerprint = fingerprint
     st.session_state.result = None
@@ -52,7 +62,9 @@ def changed() -> None:
     st.session_state.stale = st.session_state.result is not None
     st.session_state.revision += 1
 
-review, schedule = st.tabs(["Duyệt cặp và lựa chọn khóa", "Thời khóa biểu"])
+staff, review, schedule = st.tabs(["TNV và BTC", "Duyệt cặp và lựa chọn khóa", "Thời khóa biểu"])
+with staff:
+    render_staff(data, changed)
 with review:
     left, right = st.columns(2)
     vid = left.selectbox("Người dạy" if data.sites else "Tình nguyện viên", sorted(data.volunteers))
@@ -103,7 +115,7 @@ with schedule:
     result = st.session_state.result
     if result:
         if st.session_state.stale:
-            st.warning("Đánh giá hoặc khóa đã thay đổi. Hãy xếp lại để cập nhật kết quả trước khi tải lịch xuống.")
+            st.warning("Dữ liệu người dạy, đánh giá hoặc khóa đã thay đổi. Hãy xếp lại để cập nhật kết quả trước khi tải lịch xuống.")
         if not result.optimal:
             st.warning("Đã có lịch hợp lệ trong thời gian cho phép. Phương án có thể còn cải thiện; bạn có thể xếp lại.")
         served = {c for s in result.sessions for c in s.children}
