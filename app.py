@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 from scheduler.models import DataError, Lock
 from scheduler.excel_io import read_workbook
-from scheduler.engine import solve, validate_locks, eligible
+from scheduler.engine import solve_for_display, validate_locks, eligible
 from scheduler.export import export_workbook, schedule_rows, timetable_grid, HEADERS
 from scheduler.explanations import unmet_demands
 from staff_ui import render_staff
@@ -105,19 +105,24 @@ except DataError as exc:
     st.error(lock_error)
 
 with schedule:
-    if st.button("Xếp lại, giữ lựa chọn khóa" if st.session_state.result else "Xếp thời khóa biểu", type="primary", disabled=bool(lock_error)):
+    st.caption("Luôn hiện các buổi xếp được. Phần thiếu môn, ngày học hoặc lead được ghi rõ; bản chưa đủ yêu cầu cần được bổ sung trước khi sử dụng.")
+    if st.button("Xếp lại, giữ lựa chọn khóa" if st.session_state.result else "Xếp thời khóa biểu", type="primary"):
         try:
             with st.spinner("Đang tìm lịch phù hợp…"):
-                st.session_state.result = solve(data)
+                st.session_state.result = solve_for_display(data)
             st.session_state.stale = False
         except DataError as exc:
             st.error(str(exc))
     result = st.session_state.result
     if result:
+        if result.issues:
+            st.warning("THỜI KHÓA BIỂU TẠM — chưa đáp ứng đủ yêu cầu")
+            for issue in result.issues:
+                st.write("• " + issue)
         if st.session_state.stale:
             st.warning("Dữ liệu người dạy, đánh giá hoặc khóa đã thay đổi. Hãy xếp lại để cập nhật kết quả trước khi tải lịch xuống.")
         if not result.optimal:
-            st.warning("Đã có lịch hợp lệ trong thời gian cho phép. Phương án có thể còn cải thiện; bạn có thể xếp lại.")
+            st.warning("Đã hiển thị phương án tìm được trong thời gian cho phép. Phương án có thể còn cải thiện; bạn có thể xếp lại.")
         served = {c for s in result.sessions for c in s.children}
         st.success(f"Đã xếp {len(served)}/{len(data.children)} bé, đáp ứng {sum(len(s.children) for s in result.sessions)}/{len(data.demands)} nhu cầu.")
         display_rows = schedule_rows(data, result)

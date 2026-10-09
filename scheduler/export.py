@@ -38,7 +38,7 @@ def timetable_tables(data: Dataset, result: Result) -> dict[str,list[list]]:
         total=sum(data.children[d.child].site==site for d in data.demands)
         title=site.replace('_',' ').upper()
         tables['TKB_'+site]=[[f'THỜI KHÓA BIỂU — {title}',*['']*7],
-                            [f'Thứ Hai–Thứ Sáu · 18:00–20:00 · Đáp ứng {fulfilled}/{total} nhu cầu bé–môn',*['']*7],
+                            [(('BẢN TẠM · ' if result.issues else '') + f'Thứ Hai–Thứ Sáu · 18:00–20:00 · Đáp ứng {fulfilled}/{total} nhu cầu bé–môn'),*['']*7],
                             *timetable_grid(data,result,site)]
     return tables
 
@@ -67,6 +67,7 @@ def export_workbook(data: Dataset, result: Result | None = None) -> bytes:
                   "Tong_quan": [["Chỉ tiêu", "Giá trị"], ["Bé được xếp", len({c for s in result.sessions for c in s.children})],
                                 ["Nhu cầu đáp ứng", sum(len(s.children) for s in result.sessions)],
                                 ["Đã xác nhận phương án tối ưu", "Có" if result.optimal else "Chưa"]], **tables}
+        tables["Yeu_cau_chua_dat"] = [["Yêu cầu chưa đáp ứng"], *[[issue] for issue in result.issues]]
         if data.sites:
             for site in data.sites:
                 tables["Lich_" + site] = [headers, *[list(r.values()) for r in rows if r["Mái ấm"] == site]]

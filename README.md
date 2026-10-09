@@ -25,7 +25,7 @@ Môi trường `.venv` trên máy triển khai đã được cài thư viện. C
 1. Chọn **Dữ liệu làm việc** (dữ liệu hai mái ấm hiện tại, dữ liệu đã lưu trên máy hoặc dữ liệu mẫu) hoặc tải một file `.xlsx`. Lỗi cấu trúc và giá trị được báo kèm sheet/hàng.
 2. Xem số TNV, bé, nhu cầu và bảng dữ liệu đầu vào.
 3. Trong **Duyệt cặp và lựa chọn khóa**, chọn mã TNV và bé; xem câu hỏi/câu trả lời phỏng vấn và ghi chú; lưu **Ưu tiên / Bình thường / Không ghép**. Ghi chú không tác động tự động đến lịch.
-4. Trong **Thời khóa biểu**, nhấn **Xếp thời khóa biểu**. Xem lịch, bé chưa có buổi và từng nhu cầu chưa đáp ứng.
+4. Trong **Thời khóa biểu**, nhấn **Xếp thời khóa biểu**. Ứng dụng luôn hiển thị các ca xếp được, cả khi còn thiếu ngày học hoặc ACA lead. Lịch chưa đủ yêu cầu được ghi **BẢN TẠM** và vẫn tải được Excel với sheet **Yeu_cau_chua_dat**. Chuyên môn, ngày rảnh, giới hạn số buổi và điều kiện ghép vẫn được giữ. Nếu các khóa mâu thuẫn, bản tạm không áp dụng các khóa đó và báo rõ; quyết định khóa gốc được giữ để bạn sửa.
 5. Khóa toàn bộ buổi đã duyệt hoặc bỏ khóa. Một khóa trong Excel là một TNV–bé–môn–ngày; buổi hai bé có thể có một phần khóa. Khóa từng lựa chọn có thể được bỏ trong khu vực duyệt.
 6. Nhấn **Xếp lại, giữ lựa chọn khóa** sau khi thay đổi. Khi dữ liệu duyệt thay đổi, lịch cũ được đánh dấu cần cập nhật và không được tải xuống như lịch hiện hành.
 7. **Tải kết quả Excel** chứa lịch, nhu cầu chưa đáp ứng, tổng quan và toàn bộ dữ liệu đầu vào. **Lưu dữ liệu, đánh giá và khóa hiện tại** dùng để lưu tiến độ kể cả khi các khóa đang mâu thuẫn. Tải lại một trong hai file này ở lần sử dụng sau.

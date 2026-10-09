@@ -1,5 +1,6 @@
 """CP-SAT scheduling with sequential (lexicographic) objectives."""
 from itertools import combinations
+from dataclasses import replace
 from time import monotonic
 from ortools.sat.python import cp_model
 from .models import DAYS, Dataset, DataError, Lock, Result, Session
@@ -27,7 +28,7 @@ def candidates(data: Dataset) -> list[Session]:
                         sessions.append(Session(vid, subject, day, (a, b)))
     return sessions
 
-def validate_locks(data: Dataset) -> None:
+def validate_locks(data: Dataset, check_leads: bool = True) -> None:
     """Explain incompatible locked choices before invoking the optimizer."""
     grouped: dict[tuple[str, str], list[Lock]] = {}
     child_days = {}
@@ -59,7 +60,7 @@ def validate_locks(data: Dataset) -> None:
     for vid, v in data.volunteers.items():
         if sum(key[0] == vid for key in grouped) > v.max_sessions:
             raise DataError(f"TNV {vid}: số buổi khóa vượt giới hạn {v.max_sessions}.")
-    if data.sites and data.locks:
+    if check_leads and data.sites and data.locks:
         legal = candidates(data)
         for lock in data.locks:
             site = data.children[lock.child].site
@@ -68,13 +69,13 @@ def validate_locks(data: Dataset) -> None:
                     and is_academic_lead(data, s.volunteer) and data.volunteers[s.volunteer].max_sessions > 0 for s in legal):
                 raise DataError(f"Khóa tại {site}, {lock.day}: không có BTC ACA IC rảnh và đủ chuyên môn trực tiếp dạy để làm lead.")
 
-def solve(data: Dataset, time_limit: float = 30.0) -> Result:
+def solve(data: Dataset, time_limit: float = 30.0, allow_partial: bool = False) -> Result:
     """Maximize children, demands, preferences, singles, then balance loads.
 
     Freeze an objective only after optimality is proven. On timeout return the
     best feasible incumbent, never sacrifice a higher-priority objective.
     """
-    validate_locks(data)
+    validate_locks(data, check_leads=not allow_partial)
     choices = candidates(data)
     model = cp_model.CpModel()
     x = [model.new_bool_var(f"session_{i}") for i in range(len(choices))]
@@ -89,9 +90,17 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
         model.add(sum(x[i] for i, s in enumerate(choices) if d.child in s.children and s.subject == d.subject) <= 1)
     lead_vars = {}
     attendance = {}
+    shortfalls = []
     for site, policy in data.sites.items():
         for day in policy.required_days:
-            model.add(sum(x[i] for i, s in enumerate(choices) if session_site(data, s) == site and s.day == day) >= 1)
+            daily_classes = sum(x[i] for i, s in enumerate(choices) if session_site(data, s) == site and s.day == day)
+            if allow_partial:
+                missing = model.new_bool_var(f"missing_day_{site}_{day}")
+                model.add(daily_classes >= 1).only_enforce_if(missing.Not())
+                model.add(daily_classes == 0).only_enforce_if(missing)
+                shortfalls.append(missing)
+            else:
+                model.add(daily_classes >= 1)
         if not policy.require_academic_lead:
             continue
         site_active = []
@@ -115,7 +124,12 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
                 present = model.new_bool_var(f"present_{site}_{day}_{vid}")
                 model.add_max_equality(present,[lead,*teaching])
                 attendance[site,day,vid] = present
-            model.add(sum(daily_leads) == active)
+            if allow_partial:
+                missing = model.new_bool_var(f"missing_lead_{site}_{day}")
+                model.add(sum(daily_leads) + missing == active)
+                shortfalls.append(missing)
+            else:
+                model.add(sum(daily_leads) == active)
         # One simultaneous class per child implies at most one fulfilled
         # demand per active day, regardless of how many people are available.
         site_children = {d.child for d in data.demands if data.children[d.child].site == site}
@@ -175,6 +189,8 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
             objectives[2:2] = [-aca_sessions, -(btc_sessions-aca_sessions), -sum(second_sessions)]
         else:
             objectives[2:2] = [-btc_sessions, -sum(second_sessions)]
+    if allow_partial:
+        objectives[2:2] = [-sum(shortfalls)]
     # The validated locks themselves form a feasible baseline, including before
     # the first search finds an incumbent.
     baseline = {}
@@ -185,13 +201,14 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
     # Locked sessions alone may lack the mandatory teaching lead. Use them as
     # an incumbent only when all site/day lead requirements are satisfied.
     baseline_leads = pick_leads(data, best)
-    baseline_valid = not any(data.sites.get(session_site(data, s)) and data.sites[session_site(data, s)].require_academic_lead
+    baseline_valid = allow_partial or not any(data.sites.get(session_site(data, s)) and data.sites[session_site(data, s)].require_academic_lead
            and (session_site(data, s), s.day) not in baseline_leads for s in best)
-    baseline_valid = baseline_valid and all(any(session_site(data, s) == site and s.day == day for s in best)
+    baseline_valid = baseline_valid and (allow_partial or all(any(session_site(data, s) == site and s.day == day for s in best)
                           for site, policy in data.sites.items() for day in policy.required_days)
+                          )
     # Standalone leads need a model assignment; teaching locks alone cannot
     # establish a feasible incumbent for a site allowing lead-only attendance.
-    if any(p.require_academic_lead and not p.lead_must_teach and (p.required_days or any(session_site(data,s)==site for s in best)) for site,p in data.sites.items()):
+    if not allow_partial and any(p.require_academic_lead and not p.lead_must_teach and (p.required_days or any(session_site(data,s)==site for s in best)) for site,p in data.sites.items()):
         baseline_valid = False
     if not baseline_valid:
         best = []
@@ -232,3 +249,28 @@ def solve(data: Dataset, time_limit: float = 30.0) -> Result:
             variable = model.get_int_var_from_proto_index(index)
             model.add_hint(variable, solver.value(variable))
     return Result(sorted(best, key=lambda s: (session_site(data, s), DAYS.index(s.day), s.volunteer)), True, values, best_leads)
+
+
+def solve_for_display(data: Dataset, time_limit: float = 30.0) -> Result:
+    """Produce a clearly labelled partial timetable while keeping teaching constraints."""
+    issues = []
+    working = data
+    try:
+        validate_locks(data, check_leads=False)
+    except DataError as exc:
+        working = replace(data, locks=set())
+        issues.append(f"Bản tạm không áp dụng các buổi khóa do mâu thuẫn: {exc}")
+    result = solve(working, time_limit=time_limit, allow_partial=True)
+    fulfilled = sum(len(s.children) for s in result.sessions)
+    if fulfilled < len(data.demands):
+        issues.append(f"Mới đáp ứng {fulfilled}/{len(data.demands)} nhu cầu bé–môn; xem danh sách nhu cầu chưa đáp ứng.")
+    for site, policy in data.sites.items():
+        for day in DAYS:
+            active = any(session_site(data, s) == site and s.day == day for s in result.sessions)
+            if day in policy.required_days and not active:
+                issues.append(f"{site} · {day}: chưa xếp được buổi học bắt buộc.")
+            if policy.require_academic_lead and (active or day in policy.required_days) and (site, day) not in result.leads:
+                suffix = " trực tiếp dạy" if policy.lead_must_teach else ""
+                issues.append(f"{site} · {day}: thiếu ACA IC làm lead{suffix}.")
+    result.issues = issues
+    return result

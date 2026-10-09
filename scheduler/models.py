@@ -80,6 +80,7 @@ class Result:
     optimal: bool
     objectives: list[int]
     leads: dict[tuple[str, str], str] = field(default_factory=dict)
+    issues: list[str] = field(default_factory=list)
 
 class DataError(ValueError):
     """Input or locked decisions violate a hard constraint."""

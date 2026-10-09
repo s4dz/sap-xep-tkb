@@ -82,4 +82,5 @@ def render_staff(data, changed):
         temporary = target.with_suffix(".tmp")
         temporary.write_bytes(payload)
         temporary.replace(target)
-        st.success("Đã lưu trên máy. Lần sau chọn Dữ liệu đã lưu trên máy để tiếp tục.")
+        st.success("Đã lưu dữ liệu trên máy. Lần sau chọn Dữ liệu đã lưu trên máy để tiếp tục.")
+        st.caption(f"File đã lưu: {target}")
