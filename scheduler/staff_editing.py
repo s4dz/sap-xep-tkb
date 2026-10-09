@@ -58,3 +58,6 @@ def remove_staff(data, identifier):
     data.ratings = {pair: rating for pair, rating in data.ratings.items() if pair[0] != identifier}
     data.locks = {lock for lock in data.locks if lock.volunteer != identifier}
     data.skill_exclusions = {rule for rule in data.skill_exclusions if rule[0] != identifier}
+    data.international_teachers.discard(identifier)
+    data.fixed_teachers = {key: vid for key,vid in data.fixed_teachers.items() if vid != identifier}
+    data.specialist_teachers = {key: people-{identifier} for key,people in data.specialist_teachers.items() if people-{identifier}}

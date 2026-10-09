@@ -31,6 +31,19 @@ def is_academic_lead(data: Dataset, volunteer: str) -> bool:
     person = data.volunteers[volunteer]
     return person.kind == "BTC" and person.role.casefold().replace("_", " ").strip() == "aca ic"
 
+
+def can_lead(data: Dataset, volunteer: str) -> bool:
+    return is_academic_lead(data, volunteer) and data.volunteers[volunteer].can_lead
+
+
+def lead_ids(result, site: str, day: str) -> tuple[str, ...]:
+    value = result.leads.get((site, day), ())
+    return (value,) if isinstance(value, str) else tuple(value)
+
+
+def lead_rows(result):
+    return [(site, day, vid) for site, day in result.leads for vid in lead_ids(result, site, day)]
+
 def session_site(data: Dataset, session: Session) -> str:
     return data.children[session.children[0]].site
 
@@ -39,6 +52,6 @@ def pick_leads(data: Dataset, sessions: list[Session]) -> dict[tuple[str, str], 
     groups: dict[tuple[str, str], list[str]] = {}
     for session in sessions:
         site = session_site(data, session)
-        if site in data.sites and data.sites[site].require_academic_lead and is_academic_lead(data, session.volunteer):
+        if site in data.sites and data.sites[site].require_academic_lead and can_lead(data, session.volunteer):
             groups.setdefault((site, session.day), []).append(session.volunteer)
     return {key: sorted(groups[key])[0] for key in sorted(groups, key=lambda key: (key[0], DAYS.index(key[1])))}

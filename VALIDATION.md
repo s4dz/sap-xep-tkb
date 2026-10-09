@@ -29,5 +29,7 @@ Ngày kiểm chứng: 07/10/2026.
 Kiểm thử tự động không thay thế thử nghiệm với dữ liệu thực tế. Chưa đo hiệu năng trên tập dữ liệu lớn và chưa chạy luồng tương tác trực tiếp trong trình duyệt.
 # Quản lý người dạy trên web
 
+Quy tắc trường quốc tế, chuyên môn bắt buộc, người dạy cố định và nhiều lead mỗi ngày đã được kiểm tra. Bộ kiểm thử hiện có 75 kiểm tra thành công. Kiểm tra bổ sung trên dữ liệu đã lưu: đủ 78/78 nhu cầu; BTC012–be_g_1 và BTC013–be_g_4 được giữ; BTC013 không lead; tre_7 học Văn với chuyên Văn; TNV012 dạy be_g_5; 6/8 nhu cầu trường quốc tế được giao nhóm phù hợp (hai nhu cầu còn lại không có đăng ký chuyên môn trong nhóm). ACA ở mái ấm 1 không cần dạy; còn 3 vị trí lead thiếu do chỉ có tối đa 12 lượt cho yêu cầu 15 lượt.
+
 Đã kiểm tra cập nhật ngày rảnh qua biểu mẫu, thêm TNV mới, lưu và đọc lại thông tin người dạy qua Excel, tạm ngưng người dạy và giới hạn một buổi của ACA IC. Sửa người dạy đánh dấu lịch cũ cần cập nhật và chặn tải kết quả cũ. Các khóa vẫn được giữ để báo mâu thuẫn nếu ngày rảnh hoặc môn dạy thay đổi. Bộ kiểm thử hiện có 64 kiểm tra thành công.
 

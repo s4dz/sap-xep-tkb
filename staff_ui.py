@@ -1,5 +1,6 @@
 """Vietnamese staff management controls for the local web app."""
 from pathlib import Path
+from dataclasses import replace
 import pandas as pd
 import streamlit as st
 from scheduler.models import CATALOG, DAYS, DataError, level
@@ -22,7 +23,7 @@ def render_staff(data, changed):
     search = st.text_input("Tìm theo mã hoặc ban", key="staff_search").strip().casefold()
     group = st.radio("Danh sách", ["Tất cả", "TNV", "BTC"], horizontal=True)
     visible = [v for v in people if (group == "Tất cả" or v.kind == group) and (not search or search in (v.id + " " + v.role).casefold())]
-    st.dataframe(pd.DataFrame([{"Mã": v.id, "Loại": v.kind, "Ban / vai trò": v.role, "Ngày rảnh": ", ".join(d for d in DAYS if d in v.days), "Buổi/tuần": v.max_sessions, "Môn theo khối": skills_summary(v.skills)} for v in visible]), hide_index=True, width="stretch")
+    st.dataframe(pd.DataFrame([{"Mã": v.id, "Loại": v.kind, "Ban / vai trò": v.role, "Ngày rảnh": ", ".join(d for d in DAYS if d in v.days), "Buổi dạy/tuần": v.max_sessions, "Được lead": "Có" if v.can_lead and v.kind=='BTC' and v.role.replace('_',' ').casefold()=='aca ic' else "Không", "Lead/tuần": v.max_lead_sessions if v.max_lead_sessions is not None else v.max_sessions, "Dạy trường quốc tế": "Có" if v.id in data.international_teachers else "Không", "Môn theo khối": skills_summary(v.skills)} for v in visible]), hide_index=True, width="stretch")
     selected = st.selectbox("Người cần chỉnh sửa", ["Thêm người mới"] + [v.id for v in visible], key="staff_selected")
     person = data.volunteers.get(selected)
     if person:
@@ -37,7 +38,10 @@ def render_staff(data, changed):
         role = st.text_input("Ban / vai trò BTC (ACA IC, WF IC, PR IC…)", value=person.role if person else "")
         days = st.multiselect("Ngày rảnh", DAYS, default=[d for d in DAYS if person and d in person.days])
         limit = st.number_input("Số buổi tối đa mỗi tuần", min_value=0, max_value=2, value=min(person.max_sessions, 2) if person else 1, step=1)
-        st.caption("ACA IC tối đa 1 buổi, gồm cả buổi chỉ làm lead. TNV và BTC ban khác tối đa 2 buổi.")
+        st.caption("ACA IC trực tiếp dạy tối đa 1 buổi. Giới hạn đi lead được đặt riêng bên dưới.")
+        international = st.checkbox("Có thể dạy các bé trường quốc tế", value=bool(person and person.id in data.international_teachers))
+        lead_enabled = st.checkbox("Được làm lead nếu thuộc ACA IC", value=person.can_lead if person else True)
+        lead_limit = st.number_input("Số buổi lead tối đa mỗi tuần", min_value=0, max_value=2, value=(person.max_lead_sessions if person.max_lead_sessions is not None else min(person.max_sessions,2)) if person else 1, step=1)
         st.markdown("**Môn có thể dạy theo khối**")
         selected_subjects = {}
         for column, block in zip(st.columns(3), GRADE_BLOCKS):
@@ -56,7 +60,13 @@ def render_staff(data, changed):
                     raise DataError("Mã này đã tồn tại. Hãy chọn người đó để sửa.")
                 skills = skills_from_blocks(selected_subjects, person.skills if person else frozenset(), whole_blocks)
                 updated = staff_member(identifier, kind, role, skills, days, int(limit))
+                academic = kind=='BTC' and role.strip().replace('_',' ').casefold()=='aca ic'
+                updated = replace(updated, can_lead=lead_enabled,
+                                  max_lead_sessions=int(lead_limit) if academic else None,
+                                  max_visits=max(int(limit),int(lead_limit)) if academic and lead_enabled else int(limit))
                 data.volunteers[updated.id] = updated
+                if international: data.international_teachers.add(updated.id)
+                else: data.international_teachers.discard(updated.id)
                 changed()
                 st.session_state.staff_notice = f"Đã lưu {updated.id}."
                 st.rerun()

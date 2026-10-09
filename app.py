@@ -9,6 +9,7 @@ from scheduler.engine import solve_for_display, validate_locks, eligible
 from scheduler.export import export_workbook, schedule_rows, timetable_grid, HEADERS
 from scheduler.explanations import unmet_demands
 from staff_ui import render_staff
+from scheduler.policies import lead_rows, can_lead
 
 st.set_page_config(page_title="Sắp xếp thời khóa biểu", page_icon="📅", layout="wide")
 st.title("Sắp xếp thời khóa biểu")
@@ -47,7 +48,16 @@ data = st.session_state.data
 if not data.sites:
     st.caption("Chế độ lớp: " + ("Cho phép ghép hai bé cùng tuổi" if data.allow_group_sessions else "Chỉ dạy 1:1") + ". Bé chưa có tuổi chỉ được xếp 1:1.")
 if data.sites:
-    st.info("Áp dụng quy tắc riêng từng mái ấm. ACA IC làm lead theo từng ngày; mái ấm yêu cầu lead dạy sẽ kiểm tra cả lớp được phân công. Buổi chỉ làm lead vẫn tính vào giới hạn tuần và được kiểm tra trùng lịch giữa hai mái ấm.")
+    st.info("Áp dụng quy tắc riêng từng mái ấm. Giới hạn trực tiếp dạy và đi lead được kiểm tra riêng; dạy và lead cùng mái ấm, cùng ngày chỉ tính một lượt đi. Không xếp trùng giờ giữa hai mái ấm.")
+    st.caption(" · ".join(f"{site}: {p.lead_count} lead/ngày" for site,p in data.sites.items() if p.require_academic_lead))
+    lead_need = sum(p.lead_count * len(p.required_days) for p in data.sites.values() if p.require_academic_lead)
+    lead_capacity = sum(min(len(v.days), v.max_lead_sessions if v.max_lead_sessions is not None else v.max_sessions,
+                            v.max_visits if v.max_visits is not None else v.max_sessions)
+                        for v in data.volunteers.values() if can_lead(data,v.id))
+    if lead_capacity < lead_need:
+        st.warning(f"Cần {lead_need} lượt lead/tuần; nhân sự hiện tại đáp ứng tối đa {lead_capacity} lượt. Lịch vẫn được xếp và ghi rõ những vị trí thiếu lead.")
+    if data.international_children:
+        st.caption("Ưu tiên người dạy phù hợp cho các bé trường quốc tế; chuyên Văn và phân công cố định được kiểm tra khi xếp lịch.")
     if data.prioritize_other_btc:st.caption("Ưu tiên người dạy: TNV → BTC ban khác → BTC ACA IC. ACA IC bắt buộc dạy tại mái ấm có yêu cầu riêng.")
     if data.flexible_science:st.caption("Đã bật linh hoạt Hóa → Lý–Hóa–Sinh cùng lớp/cấp; cấp 2 được nhận KHTN tổng hợp.")
     if data.prefer_pairs:st.caption("Ưu tiên thêm lớp ghép hợp lệ tại mái ấm cho phép ghép.")
@@ -56,7 +66,13 @@ for col, label, value in zip(columns, ["Người dạy" if data.sites else "Tìn
     col.metric(label, value)
 with st.expander("Xem dữ liệu đầu vào"):
     st.dataframe(pd.DataFrame([{"Mã người dạy": v.id, "Loại": v.kind, "Vai trò": v.role, "Môn và lớp": "; ".join(f"{s} lớp {g}" for s, g in sorted(v.skills)), "Ngày rảnh": "; ".join(sorted(v.days)), "Giới hạn buổi": v.max_sessions} for v in data.volunteers.values()]), hide_index=True)
-    st.dataframe(pd.DataFrame([{"Mã bé": c.id, "Mái ấm": c.site, "Tuổi": c.age if c.age is not None else "Chưa cung cấp", "Lớp": c.grade, "Ngày rảnh": "; ".join(sorted(c.days)), "Môn cần học": "; ".join(d.subject for d in data.demands if d.child == c.id)} for c in data.children.values()]), hide_index=True)
+    st.dataframe(pd.DataFrame([{"Mã bé": c.source_id or c.id, "Mái ấm": c.site, "Trường quốc tế": "Có" if c.id in data.international_children else "Không", "Tuổi": c.age if c.age is not None else "Chưa cung cấp", "Lớp": c.grade, "Ngày rảnh": "; ".join(sorted(c.days)), "Môn cần học": "; ".join(d.subject for d in data.demands if d.child == c.id)} for c in data.children.values()]), hide_index=True)
+if data.fixed_teachers or data.specialist_teachers:
+    with st.expander("Phân công cố định và chuyên môn bắt buộc"):
+        for (cid,subject),vid in data.fixed_teachers.items():
+            st.write(f"{data.children[cid].source_id or cid} · {subject}: cố định {vid}")
+        for (cid,subject),people in data.specialist_teachers.items():
+            st.write(f"{data.children[cid].source_id or cid} · {subject}: chỉ chọn {', '.join(sorted(people))}")
 
 def changed() -> None:
     st.session_state.stale = st.session_state.result is not None
@@ -138,7 +154,7 @@ with schedule:
             st.dataframe(pd.DataFrame(display_rows, columns=HEADERS), hide_index=True, width="stretch")
         if result.leads:
             st.subheader("Lead team theo ngày")
-            st.dataframe(pd.DataFrame([{"Mái ấm":site,"Ngày":day,"ACA IC":vid,"Trực tiếp dạy":"Có" if any(s.volunteer==vid and s.day==day and data.children[s.children[0]].site==site for s in result.sessions) else "Không"} for (site,day),vid in result.leads.items()]),hide_index=True)
+            st.dataframe(pd.DataFrame([{"Mái ấm":site,"Ngày":day,"ACA IC":vid,"Trực tiếp dạy":"Có" if any(s.volunteer==vid and s.day==day and data.children[s.children[0]].site==site for s in result.sessions) else "Không"} for site,day,vid in lead_rows(result)]),hide_index=True)
         for idx, session in enumerate(result.sessions):
             keys = {Lock(session.volunteer, c, session.subject, session.day) for c in session.children}
             fully_locked = keys <= data.locks

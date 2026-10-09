@@ -2,7 +2,7 @@
 from .models import DAYS, Dataset, Lock, Result
 from .excel_io import input_tables, write_tables
 from .explanations import unmet_demands
-from .policies import session_site
+from .policies import session_site, lead_ids, lead_rows
 
 HEADERS = ["Ngày", "Giờ", "TNV", "Môn", "Bé thứ nhất", "Bé thứ hai", "Trạng thái khóa"]
 
@@ -20,10 +20,10 @@ def timetable_grid(data: Dataset, result: Result, site: str) -> list[list]:
             else:
                 flags = []
                 if len(s.children)==2:flags.append("ghép")
-                if result.leads.get((site,day))==s.volunteer:flags.append("lead")
+                if s.volunteer in lead_ids(result,site,day):flags.append("lead")
                 cells.append(f"{s.subject}\n{s.volunteer}" + (" · " + ", ".join(flags) if flags else ""))
         rows.append([number,c.source_id or c.id,c.grade,*cells])
-    rows.append(["LEAD TEAM","","",*[result.leads.get((site,day),"") for day in DAYS]])
+    rows.append(["LEAD TEAM","","",*["\n".join(lead_ids(result,site,day)) for day in DAYS]])
     missing=[c.source_id or c.id for c in kids if not any(d.child==c.id for d in data.demands)]
     note = "Mỗi ô ghi môn và người dạy. Ô có ‘ghép’ cùng người dạy, cùng ngày là một buổi hai bé."
     if missing:note += " Chưa có môn trong TKB nguồn: " + ", ".join(missing) + "."
@@ -52,7 +52,7 @@ def schedule_rows(data: Dataset, result: Result) -> list[dict]:
             site = session_site(data, s)
             row = {("Người dạy" if key == "TNV" else key): value for key, value in row.items()}
             row = {"Mái ấm": site, **row, "Loại": data.volunteers[s.volunteer].kind,
-                   "Lead team": "Có" if result.leads.get((site, s.day)) == s.volunteer else ""}
+                   "Lead team": "Có" if s.volunteer in lead_ids(result,site,s.day) else ""}
         rows.append(row)
     return rows
 
@@ -71,6 +71,6 @@ def export_workbook(data: Dataset, result: Result | None = None) -> bytes:
         if data.sites:
             for site in data.sites:
                 tables["Lich_" + site] = [headers, *[list(r.values()) for r in rows if r["Mái ấm"] == site]]
-            tables["Lead_team"] = [["Mái ấm", "Ngày", "BTC ACA IC", "Trực tiếp dạy"], *[[site, day, vid, "Có" if any(s.volunteer==vid and s.day==day and session_site(data,s)==site for s in result.sessions) else "Không"] for (site, day), vid in result.leads.items()]]
+            tables["Lead_team"] = [["Mái ấm", "Ngày", "BTC ACA IC", "Trực tiếp dạy"], *[[site, day, vid, "Có" if any(s.volunteer==vid and s.day==day and session_site(data,s)==site for s in result.sessions) else "Không"] for site, day, vid in lead_rows(result)]]
             tables={**timetable_tables(data,result),**tables}
     return write_tables(tables)

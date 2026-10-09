@@ -117,7 +117,7 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                     source_row=dict(zip(source_headers,raw))
                     cid=text(source_row.get("Mã bé"));source_id=text(source_row.get("Mã trong TKB"))
                     if cid in children and source_id:children[cid]=replace(children[cid],source_id=source_id)
-        skills, limits, kinds, roles = {}, {}, {}, {}
+        skills, limits, kinds, roles, staff_flags = {}, {}, {}, {}, {}
         for r in rows("TNV"):
             vid = text(r["Ma_TNV"])
             if not vid:
@@ -137,11 +137,23 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
             if kind not in ("TNV", "BTC") or (vid in kinds and (kinds[vid], roles[vid]) != (kind, role)):
                 raise DataError("Loại người dạy phải là TNV/BTC và vai trò phải thống nhất giữa các hàng.")
             kinds[vid], roles[vid] = kind, role
+            def boolean_flag(key, default=False):
+                value = text(r.get(key)) or ("Có" if default else "Không")
+                if value not in ("Có", "Không"):
+                    raise DataError(f"{key} phải là Có/Không.")
+                return value == "Có"
+            meta = (boolean_flag("Duoc_lead", True),
+                    integer(r["Gioi_han_lead"],0,2) if text(r.get("Gioi_han_lead")) else None,
+                    integer(r["Gioi_han_di"],0,5) if text(r.get("Gioi_han_di")) else None,
+                    boolean_flag("Day_quoc_te"))
+            if vid in staff_flags and staff_flags[vid] != meta:
+                raise DataError("Thông tin lead/quốc tế phải thống nhất giữa các hàng của người dạy.")
+            staff_flags[vid] = meta
         availability = {vid: set() for vid in skills}
         for r in rows("Lich_ranh_TNV"):
             vid = reference(r["Ma_TNV"], skills, "TNV")
             availability[vid].add(day(r["Ngay"]))
-        volunteers = {vid: Volunteer(vid, frozenset(s), frozenset(availability[vid]), limits[vid], kinds[vid], roles[vid]) for vid, s in skills.items()}
+        volunteers = {vid: Volunteer(vid, frozenset(s), frozenset(availability[vid]), limits[vid], kinds[vid], roles[vid], *staff_flags[vid][:3]) for vid, s in skills.items()}
         demands = []
         for r in rows("Nhu_cau_be"):
             cid = reference(r["Ma_be"], children, "bé")
@@ -153,6 +165,12 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                 raise DataError(f"Nhu cầu {cid}–{sub} bị trùng.")
             demands.append(d)
         data = Dataset(volunteers, children, demands, allow_group_sessions=allow_group_sessions)
+        data.international_teachers = {vid for vid, flags in staff_flags.items() if flags[3]}
+        for _, row in tables["Be"]:
+            flag = text(row.get("Truong_quoc_te")) or "Không"
+            if flag not in ("Có", "Không"):
+                raise DataError("Be.Truong_quoc_te phải là Có/Không.")
+            if flag == "Có": data.international_children.add(text(row["Ma_be"]))
         tier_setting = settings.get("Uu_tien_nguon_luc", "Không")
         if tier_setting not in ("Có", "Không"):
             raise DataError("Cau_hinh.Uu_tien_nguon_luc phải là Có/Không.")
@@ -177,7 +195,11 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                 must_teach = text(row.get("Lead_bat_buoc_day")) or "Có"
                 if must_teach not in ("Có","Không"):
                     raise DataError("Lead_bat_buoc_day phải là Có/Không.")
-                data.sites[text(row["Mai_am"])] = SitePolicy(*(f == "Có" for f in flags), required_days=required_days, lead_must_teach=must_teach=="Có")
+                lead_count = integer(row.get("So_lead_moi_ngay") or 1, 1, 2)
+                lead_only = text(row.get("ACA_chi_day_khi_lead")) or "Không"
+                if lead_only not in ("Có", "Không"):
+                    raise DataError("ACA_chi_day_khi_lead phải là Có/Không.")
+                data.sites[text(row["Mai_am"])] = SitePolicy(*(f == "Có" for f in flags), required_days=required_days, lead_must_teach=must_teach=="Có", lead_count=lead_count, aca_teach_only_when_leading=lead_only=="Có")
             if any(c.site not in data.sites for c in children.values()):
                 raise DataError("Mỗi bé phải có Mai_am và mái ấm đó phải có trong Quy_tac_mai_am.")
         for r in rows("Cap_be_xung_khac"):
@@ -224,6 +246,28 @@ def read_workbook(source: bytes | Path | str) -> Dataset:
                 if sub not in CATALOG[level(grade)]:
                     raise DataError("Môn không thuộc danh mục lớp.")
                 data.skill_exclusions.add((vid, sub, grade))
+        for sheet_name, fixed in (("Phan_cong_co_dinh", True), ("Chuyen_mon_bat_buoc", False)):
+            if sheet_name not in wb.sheetnames: continue
+            extra_rows = list(wb[sheet_name].values)
+            headers = [text(v) for v in extra_rows[0]] if extra_rows else []
+            if not {"Ma_be", "Mon", "Ma_TNV"} <= set(headers):
+                raise DataError(f"{sheet_name}: cần cột Ma_be, Mon, Ma_TNV.")
+            for index, values in enumerate(extra_rows[1:], 2):
+                if not any(text(v) for v in values): continue
+                context = f"Sheet {sheet_name}, hàng {index}: "
+                row = dict(zip(headers, values))
+                cid = reference(row["Ma_be"], children, "bé")
+                sub = subject(row["Mon"])
+                vid = reference(row["Ma_TNV"], volunteers, "người dạy")
+                if Demand(cid, sub) not in demands:
+                    raise DataError("Không có nhu cầu bé–môn tương ứng.")
+                if fixed:
+                    if (cid,sub) in data.fixed_teachers:
+                        raise DataError("Phân công cố định trùng bé–môn.")
+                    data.fixed_teachers[cid,sub] = vid
+                else:
+                    previous = data.specialist_teachers.get((cid,sub),frozenset())
+                    data.specialist_teachers[cid,sub] = previous | {vid}
         if not children or not volunteers or not demands:
             raise DataError("Cần ít nhất một TNV, một bé và một nhu cầu.")
         return data
@@ -239,16 +283,21 @@ def input_tables(data: Dataset) -> dict[str, list[list]]:
     tables["Cau_hinh"].append(["Uu_tien_nguon_luc", "Có" if data.prioritize_volunteers else "Không"])
     for setting,attribute in [('Linh_hoat_Hoa_KHTN','flexible_science'),('BTC_ban_khac_truoc_ACA','prioritize_other_btc'),('Uu_tien_lop_ghep','prefer_pairs')]:
         tables['Cau_hinh'].append([setting,'Có' if getattr(data,attribute) else 'Không'])
-    tables["TNV"][0] += ["Loai", "Vai_tro"]
+    tables["TNV"][0] += ["Loai", "Vai_tro", "Duoc_lead", "Gioi_han_lead", "Gioi_han_di", "Day_quoc_te"]
     tables["Be"][0].append("Mai_am")
     tables["Be"][0].append("Ma_nguon")
+    tables["Be"][0].append("Truong_quoc_te")
     if data.sites:
-        tables["Quy_tac_mai_am"] = [["Mai_am", "Ghep_cap_1", "Can_lead_aca_ic", "Dung_lop_thay_tuoi", "Ngay_hoc_bat_buoc", "Lead_bat_buoc_day"],
-            *[[site, "Có" if p.allow_primary_pairs else "Không", "Có" if p.require_academic_lead else "Không", "Có" if p.pair_by_grade else "Không", ";".join(d for d in DAYS if d in p.required_days), "Có" if p.lead_must_teach else "Không"] for site, p in data.sites.items()]]
+        tables["Quy_tac_mai_am"] = [["Mai_am", "Ghep_cap_1", "Can_lead_aca_ic", "Dung_lop_thay_tuoi", "Ngay_hoc_bat_buoc", "Lead_bat_buoc_day", "So_lead_moi_ngay", "ACA_chi_day_khi_lead"],
+            *[[site, "Có" if p.allow_primary_pairs else "Không", "Có" if p.require_academic_lead else "Không", "Có" if p.pair_by_grade else "Không", ";".join(d for d in DAYS if d in p.required_days), "Có" if p.lead_must_teach else "Không", p.lead_count, "Có" if p.aca_teach_only_when_leading else "Không"] for site, p in data.sites.items()]]
     for v in data.volunteers.values():
-        tables["TNV"].extend([v.id, s, g, v.max_sessions, v.kind, v.role] for s, g in sorted(v.skills))
+        tables["TNV"].extend([v.id, s, g, v.max_sessions, v.kind, v.role, "Có" if v.can_lead else "Không", v.max_lead_sessions, v.max_visits, "Có" if v.id in data.international_teachers else "Không"] for s, g in sorted(v.skills))
         tables["Lich_ranh_TNV"].extend([v.id, d] for d in DAYS if d in v.days)
-    tables["Be"].extend([c.id, c.age, c.grade, ";".join(d for d in DAYS if d in c.days), c.site, c.source_id] for c in data.children.values())
+    tables["Be"].extend([c.id, c.age, c.grade, ";".join(d for d in DAYS if d in c.days), c.site, c.source_id, "Có" if c.id in data.international_children else "Không"] for c in data.children.values())
+    if data.fixed_teachers:
+        tables["Phan_cong_co_dinh"] = [["Ma_be","Mon","Ma_TNV"], *[[cid,sub,vid] for (cid,sub),vid in sorted(data.fixed_teachers.items())]]
+    if data.specialist_teachers:
+        tables["Chuyen_mon_bat_buoc"] = [["Ma_be","Mon","Ma_TNV"], *[[cid,sub,vid] for (cid,sub),people in sorted(data.specialist_teachers.items()) for vid in sorted(people)]]
     tables["Nhu_cau_be"].extend([d.child, d.subject] for d in data.demands)
     tables["Insight_be"].extend([cid, note] for cid, note in data.insights.items())
     tables["Cap_be_xung_khac"].extend(sorted(pair) for pair in sorted(data.conflicts, key=lambda p: sorted(p)))

@@ -19,6 +19,9 @@ class Volunteer:
     max_sessions: int = 1
     kind: str = "TNV"
     role: str = ""
+    can_lead: bool = True
+    max_lead_sessions: int | None = None
+    max_visits: int | None = None
 
 @dataclass(frozen=True)
 class Child:
@@ -37,6 +40,8 @@ class SitePolicy:
     pair_by_grade: bool = False
     required_days: frozenset[str] = frozenset()
     lead_must_teach: bool = True
+    lead_count: int = 1
+    aca_teach_only_when_leading: bool = False
 
 @dataclass(frozen=True)
 class Demand:
@@ -74,13 +79,17 @@ class Dataset:
     prioritize_other_btc: bool = False
     prefer_pairs: bool = False
     skill_exclusions: set[tuple[str, str, int]] = field(default_factory=set)
+    international_children: set[str] = field(default_factory=set)
+    international_teachers: set[str] = field(default_factory=set)
+    specialist_teachers: dict[tuple[str, str], frozenset[str]] = field(default_factory=dict)
+    fixed_teachers: dict[tuple[str, str], str] = field(default_factory=dict)
 
 @dataclass
 class Result:
     sessions: list[Session]
     optimal: bool
     objectives: list[int]
-    leads: dict[tuple[str, str], str] = field(default_factory=dict)
+    leads: dict[tuple[str, str], str | tuple[str, ...]] = field(default_factory=dict)
     issues: list[str] = field(default_factory=list)
 
 class DataError(ValueError):

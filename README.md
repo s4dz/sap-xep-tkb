@@ -34,6 +34,10 @@ Trong tab **TNV và BTC**, tìm người theo mã/ban, sửa ngày rảnh, môn 
 
 Sheet tùy chọn **Ngoai_le_chuyen_mon** gồm `Ma_TNV`, `Mon`, `Lop`: ghi các môn/lớp người đó không thể dạy. Ngoại lệ được ưu tiên hơn quy tắc linh hoạt Hóa → KHTN, được giữ khi lưu/tải dữ liệu và hiện trong phần chỉnh sửa người dạy.
 
+Người dạy có cờ **Day_quoc_te** để ưu tiên các bé được đánh dấu **Truong_quoc_te**. **Phan_cong_co_dinh** giữ người dạy theo bé–môn; **Chuyen_mon_bat_buoc** chỉ cho phép những người được chỉ định dạy môn đó. Các quy tắc vẫn kiểm tra môn/lớp, ngày rảnh và giới hạn buổi.
+
+Lead hỗ trợ nhiều người mỗi mái ấm/ngày qua **So_lead_moi_ngay**. Trong tab TNV/BTC, đặt **Được làm lead** và **Số buổi lead tối đa mỗi tuần** riêng với số buổi dạy. Cột **Gioi_han_di** giới hạn tổng số lượt đi (dạy/lead cùng mái ấm và ngày tính một lần). **ACA_chi_day_khi_lead** yêu cầu ACA chỉ dạy ở mái ấm đó vào ngày mình làm lead; bộ xếp lịch hạn chế tối đa các ca dạy ACA này trước khi xét ưu tiên mềm khác.
+
 Nhấn **Lưu dữ liệu trên máy này** để lưu tiến độ tại `data/private/du_lieu_dang_sua.xlsx`. Lần mở sau ứng dụng ưu tiên bản đã lưu; dữ liệu gốc được giữ. File này được loại khỏi Git. Có thể tải bản Excel ở cuối trang để sao lưu hoặc chuyển sang máy khác. Thay nguồn dữ liệu sẽ bắt đầu phiên mới; hãy lưu trước khi chuyển nguồn hoặc đóng trang.
 
 ## Cấu trúc workbook
