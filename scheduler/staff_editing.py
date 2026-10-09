@@ -1,6 +1,33 @@
 """Validate staff edits before changing the working dataset."""
 from .models import CATALOG, DAYS, DataError, Volunteer, level
 
+GRADE_BLOCKS = {1: range(1, 6), 2: range(6, 10), 3: range(10, 13)}
+BLOCK_LABELS = {1: "Cấp 1 · Lớp 1–5", 2: "Cấp 2 · Lớp 6–9", 3: "Cấp 3 · Lớp 10–12"}
+
+
+def skills_from_blocks(selected, previous=frozenset(), whole_blocks=False):
+    """New subjects cover a block; existing grade restrictions survive routine edits."""
+    skills = set()
+    for block, subjects in selected.items():
+        for subject in subjects:
+            existing = {(s, g) for s, g in previous if s == subject and level(g) == block}
+            skills.update(existing if existing and not whole_blocks else {(subject, g) for g in GRADE_BLOCKS[block]})
+    return frozenset(skills)
+
+
+def skills_summary(skills):
+    blocks = []
+    for block, grades in GRADE_BLOCKS.items():
+        subjects = sorted({s for s, g in skills if g in grades})
+        parts = []
+        for subject in subjects:
+            taught = {g for s, g in skills if s == subject and g in grades}
+            suffix = "" if taught == set(grades) else " (lớp " + ", ".join(map(str, sorted(taught))) + ")"
+            parts.append(subject + suffix)
+        if parts:
+            blocks.append(f"Cấp {block}: " + ", ".join(parts))
+    return "; ".join(blocks)
+
 
 def staff_member(identifier, kind, role, skills, days, max_sessions):
     identifier = identifier.strip()

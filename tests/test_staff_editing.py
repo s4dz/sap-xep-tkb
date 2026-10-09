@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 from scheduler.models import DAYS, DataError, Lock, Result
-from scheduler.staff_editing import staff_member, remove_staff
+from scheduler.staff_editing import staff_member, remove_staff, skills_from_blocks
 from scheduler.engine import validate_locks
 from scheduler.excel_io import read_workbook
 from scheduler.export import export_workbook
@@ -41,11 +41,11 @@ def test_staff_form_update_add_and_stale():
     next(s for s in app.selectbox if s.label == "Người cần chỉnh sửa").set_value("Thêm người mới").run()
     next(t for t in app.text_input if t.label == "Mã người dạy").set_value("TNV_NEW")
     next(m for m in app.multiselect if m.label == "Ngày rảnh").set_value([DAYS[0]])
-    next(m for m in app.multiselect if m.label == "Môn và lớp có thể dạy").set_value(["Lớp 3 · Toán"])
+    next(m for m in app.multiselect if m.label == "Cấp 1 · Lớp 1–5").set_value(["Toán"])
     next(b for b in app.button if b.label == "Thêm người dạy").click().run()
     assert not app.exception
     data = app.session_state.data
-    assert data.volunteers["TNV_NEW"].skills == frozenset([("Toán", 3)])
+    assert data.volunteers["TNV_NEW"].skills == frozenset(("Toán", g) for g in range(1, 6))
     assert read_workbook(export_workbook(data)).volunteers == data.volunteers
 
 
@@ -75,3 +75,12 @@ def test_delete_selected_staff_ui():
     assert "TNV001" not in app.session_state.data.volunteers
     assert app.session_state.result is None
     assert next(s for s in app.selectbox if s.label == "Người cần chỉnh sửa").value == "Thêm người mới"
+
+
+def test_blocks_preserve_restrictions_and_expand_only_selected_subjects():
+    previous = frozenset({("Toán", 3), ("Tiếng Anh", 7), ("Hóa học", 12)})
+    selected = {1: ["Toán"], 2: ["Tiếng Anh", "Ngữ văn"], 3: []}
+    skills = skills_from_blocks(selected, previous)
+    assert skills == frozenset({("Toán", 3), ("Tiếng Anh", 7)} | {("Ngữ văn", g) for g in range(6, 10)})
+    expanded = skills_from_blocks(selected, previous, whole_blocks=True)
+    assert expanded == frozenset({("Toán", g) for g in range(1, 6)} | {(s, g) for s in ("Tiếng Anh", "Ngữ văn") for g in range(6, 10)})

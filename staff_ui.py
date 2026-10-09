@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 from scheduler.models import CATALOG, DAYS, DataError, level
-from scheduler.staff_editing import staff_member, remove_staff
+from scheduler.staff_editing import staff_member, remove_staff, skills_from_blocks, skills_summary, GRADE_BLOCKS, BLOCK_LABELS
 from scheduler.export import export_workbook
 
 
@@ -22,13 +22,11 @@ def render_staff(data, changed):
     search = st.text_input("Tìm theo mã hoặc ban", key="staff_search").strip().casefold()
     group = st.radio("Danh sách", ["Tất cả", "TNV", "BTC"], horizontal=True)
     visible = [v for v in people if (group == "Tất cả" or v.kind == group) and (not search or search in (v.id + " " + v.role).casefold())]
-    st.dataframe(pd.DataFrame([{"Mã": v.id, "Loại": v.kind, "Ban / vai trò": v.role, "Ngày rảnh": ", ".join(d for d in DAYS if d in v.days), "Buổi/tuần": v.max_sessions, "Môn và lớp": "; ".join(f"{s} lớp {g}" for s, g in sorted(v.skills, key=lambda x: (x[1], x[0])))} for v in visible]), hide_index=True, width="stretch")
+    st.dataframe(pd.DataFrame([{"Mã": v.id, "Loại": v.kind, "Ban / vai trò": v.role, "Ngày rảnh": ", ".join(d for d in DAYS if d in v.days), "Buổi/tuần": v.max_sessions, "Môn theo khối": skills_summary(v.skills)} for v in visible]), hide_index=True, width="stretch")
     selected = st.selectbox("Người cần chỉnh sửa", ["Thêm người mới"] + [v.id for v in visible], key="staff_selected")
     person = data.volunteers.get(selected)
     revision = st.session_state.revision
     prefix = f"staff_{selected}_{revision}"
-    # Grade-specific choices avoid silently broadening teaching qualifications.
-    choices = {f"Lớp {g} · {s}": (s, g) for g in range(1, 13) for s in sorted(CATALOG[level(g)])}
     with st.form(prefix):
         identifier = st.text_input("Mã người dạy", value=person.id if person else "", disabled=person is not None)
         kind = st.selectbox("Loại người dạy", ["TNV", "BTC"], index=1 if person and person.kind == "BTC" else 0)
@@ -36,12 +34,24 @@ def render_staff(data, changed):
         days = st.multiselect("Ngày rảnh", DAYS, default=[d for d in DAYS if person and d in person.days])
         limit = st.number_input("Số buổi tối đa mỗi tuần", min_value=0, max_value=2, value=min(person.max_sessions, 2) if person else 1, step=1)
         st.caption("ACA IC tối đa 1 buổi, gồm cả buổi chỉ làm lead. TNV và BTC ban khác tối đa 2 buổi.")
-        skills = st.multiselect("Môn và lớp có thể dạy", list(choices), default=[label for label, skill in choices.items() if person and skill in person.skills])
+        st.markdown("**Môn có thể dạy theo khối**")
+        selected_subjects = {}
+        for column, block in zip(st.columns(3), GRADE_BLOCKS):
+            with column:
+                defaults = sorted({s for s, g in person.skills if level(g) == block}) if person else []
+                selected_subjects[block] = st.multiselect(BLOCK_LABELS[block], sorted(CATALOG[block]), default=defaults)
+        whole_blocks = False
+        if person:
+            whole_blocks = st.checkbox("Cho phép dạy toàn bộ lớp trong các khối đã chọn", value=False)
+            st.caption("Môn đã có giữ giới hạn lớp hiện tại. Môn mới chọn áp dụng cho toàn khối; tích ô trên để mở rộng cả môn đã có.")
+        else:
+            st.caption("Môn được chọn áp dụng cho toàn bộ lớp trong khối đó.")
         if st.form_submit_button("Lưu thay đổi người dạy" if person else "Thêm người dạy", type="primary"):
             try:
                 if person is None and identifier.strip() in data.volunteers:
                     raise DataError("Mã này đã tồn tại. Hãy chọn người đó để sửa.")
-                updated = staff_member(identifier, kind, role, [choices[s] for s in skills], days, int(limit))
+                skills = skills_from_blocks(selected_subjects, person.skills if person else frozenset(), whole_blocks)
+                updated = staff_member(identifier, kind, role, skills, days, int(limit))
                 data.volunteers[updated.id] = updated
                 changed()
                 st.session_state.staff_notice = f"Đã lưu {updated.id}."
