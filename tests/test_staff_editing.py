@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 from scheduler.models import DAYS, DataError, Lock, Result
-from scheduler.staff_editing import staff_member
+from scheduler.staff_editing import staff_member, remove_staff
 from scheduler.engine import validate_locks
 from scheduler.excel_io import read_workbook
 from scheduler.export import export_workbook
@@ -47,3 +47,31 @@ def test_staff_form_update_add_and_stale():
     data = app.session_state.data
     assert data.volunteers["TNV_NEW"].skills == frozenset([("Toán", 3)])
     assert read_workbook(export_workbook(data)).volunteers == data.volunteers
+
+
+def test_delete_staff_cleans_references_and_preserves_other_people():
+    data = sample_data()
+    other = data.volunteers["TNV002"]
+    data.ratings[("TNV001", "BE001")] = "Ưu tiên"
+    data.ratings[("TNV002", "BE001")] = "Bình thường"
+    retained_ratings = {pair: rating for pair, rating in data.ratings.items() if pair[0] != "TNV001"}
+    data.locks.update({Lock("TNV001", "BE001", "Toán", DAYS[0]), Lock("TNV002", "BE002", "Toán", DAYS[0])})
+    data.interviews["TNV001"] = [("Câu hỏi", "Trả lời")]
+    remove_staff(data, "TNV001")
+    assert "TNV001" not in data.volunteers and "TNV001" not in data.interviews
+    assert data.volunteers["TNV002"] == other
+    assert data.ratings == retained_ratings
+    assert {lock.volunteer for lock in data.locks} == {"TNV002"}
+    assert read_workbook(export_workbook(data)).volunteers == data.volunteers
+
+
+def test_delete_selected_staff_ui():
+    app = AppTest.from_file(Path("app.py").resolve(), default_timeout=30).run()
+    next(s for s in app.selectbox if s.label == "Dữ liệu làm việc").set_value("Dữ liệu mẫu").run()
+    next(s for s in app.selectbox if s.label == "Người cần chỉnh sửa").set_value("TNV001").run()
+    app.session_state.result = Result([], True, [])
+    next(b for b in app.button if b.label == "Xóa người được chọn").click().run()
+    assert not app.exception
+    assert "TNV001" not in app.session_state.data.volunteers
+    assert app.session_state.result is None
+    assert next(s for s in app.selectbox if s.label == "Người cần chỉnh sửa").value == "Thêm người mới"

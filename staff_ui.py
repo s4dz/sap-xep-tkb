@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 from scheduler.models import CATALOG, DAYS, DataError, level
-from scheduler.staff_editing import staff_member
+from scheduler.staff_editing import staff_member, remove_staff
 from scheduler.export import export_workbook
 
 
@@ -48,6 +48,19 @@ def render_staff(data, changed):
                 st.rerun()
             except DataError as exc:
                 st.error(str(exc))
+    if person:
+        st.caption("Xóa người này sẽ gỡ cả đánh giá, thông tin phỏng vấn và buổi khóa liên quan. Bạn cần xếp lại thời khóa biểu.")
+
+        def delete_selected():
+            remove_staff(data, person.id)
+            changed()
+            # The old timetable contains references to the deleted staff member.
+            st.session_state.result = None
+            st.session_state.stale = False
+            st.session_state.staff_selected = "Thêm người mới"
+            st.session_state.staff_notice = f"Đã xóa {person.id}. Hãy xếp lại thời khóa biểu."
+
+        st.button("Xóa người được chọn", key=f"delete_{person.id}", on_click=delete_selected)
     if st.session_state.get("staff_notice"):
         st.success(st.session_state.pop("staff_notice"))
     st.subheader("Lưu để dùng lần sau")

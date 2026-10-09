@@ -20,3 +20,13 @@ def staff_member(identifier, kind, role, skills, days, max_sessions):
     if max_sessions and not days:
         raise DataError("Chọn ngày rảnh hoặc đặt số buổi bằng 0 để tạm ngưng.")
     return Volunteer(identifier, frozenset(skills), frozenset(days), max_sessions, kind, role)
+
+
+def remove_staff(data, identifier):
+    """Remove a staff member and references that cannot survive deletion."""
+    if identifier not in data.volunteers:
+        raise DataError("Người dạy này không còn trong danh sách.")
+    del data.volunteers[identifier]
+    data.interviews.pop(identifier, None)
+    data.ratings = {pair: rating for pair, rating in data.ratings.items() if pair[0] != identifier}
+    data.locks = {lock for lock in data.locks if lock.volunteer != identifier}
